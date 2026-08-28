@@ -1,0 +1,219 @@
+{
+  "_comment": "Keeper's Riddle question bank for the Plomp Chronicles bot. Each question is tagged with the chapter it's sourced from so new riddles can be added per chapter drop without touching bot logic. Add/edit freely — the bot just reads this file.",
+
+  "settings": {
+    "xp_correct": 40,
+    "xp_first_correct_bonus": 20,
+    "cooldown_seconds": 300,
+    "answer_window_seconds": 120
+  },
+
+  "riddles": [
+    {
+      "id": "ch1-001",
+      "chapter": "I",
+      "type": "multiple_choice",
+      "question": "What does The Core choose above all else?",
+      "options": ["Power", "Wealth", "The Worthy", "Revenge"],
+      "answer": "The Worthy",
+      "hint": "Chapter I: 'a relic that chose only the worthy.'"
+    },
+    {
+      "id": "ch2-001",
+      "chapter": "II",
+      "type": "multiple_choice",
+      "question": "How many days did the skies burn during the Black Tide's assault on the Green Order?",
+      "options": ["7 days", "30 days", "77 days", "100 days"],
+      "answer": "77 days",
+      "hint": "Chapter II opens with this exact number."
+    },
+    {
+      "id": "ch2-002",
+      "chapter": "II",
+      "type": "multiple_choice",
+      "question": "What did the Black Tide believe about The Core?",
+      "options": [
+        "It would obey whoever possessed it",
+        "It could be destroyed",
+        "It chose its guardians",
+        "It was a myth"
+      ],
+      "answer": "It would obey whoever possessed it",
+      "hint": "This belief turned out to be wrong — The Core had already vanished."
+    },
+    {
+      "id": "ch2-003",
+      "chapter": "II",
+      "type": "multiple_choice",
+      "question": "What did the scattered Plompers leave behind before disappearing?",
+      "options": [
+        "Maps to the Isle of Echoes",
+        "Glowing marks only another Plomper could recognize",
+        "A copy of the prophecy",
+        "The black crystal"
+      ],
+      "answer": "Glowing marks only another Plomper could recognize",
+      "hint": "The Black Tide dismissed these as myths — their greatest mistake."
+    },
+    {
+      "id": "ch3-001",
+      "chapter": "III",
+      "type": "multiple_choice",
+      "question": "What did the ancient guardians shatter to protect The Core, rather than the Core itself?",
+      "options": ["The Isle of Echoes", "The path to The Core (its key)", "The black crystal", "The Citadel"],
+      "answer": "The path to The Core (its key)",
+      "hint": "The key was divided among Seven Keepers."
+    },
+    {
+      "id": "ch3-002",
+      "chapter": "III",
+      "type": "fill_blank",
+      "question": "Complete the prophecy: 'When seven awaken as one, the path to The Core shall ___.'",
+      "answer": "reveal itself once more",
+      "hint": "Spoken by the ancient guardians before the Keepers were scattered."
+    },
+    {
+      "id": "ch3-003",
+      "chapter": "III",
+      "type": "multiple_choice",
+      "question": "Among how many Keepers was the key to The Core divided?",
+      "options": ["Three", "Five", "Seven", "Twelve"],
+      "answer": "Seven",
+      "hint": "Right there in the chapter title."
+    },
+    {
+      "id": "ch4-001",
+      "chapter": "IV",
+      "type": "multiple_choice",
+      "question": "What was the recurring message in the Plompers' shared dream?",
+      "options": [
+        "\"The traitor has returned.\"",
+        "\"Find the Seven... before they find you.\"",
+        "\"The Core cannot be owned.\"",
+        "\"Good... now they can finally find me.\""
+      ],
+      "answer": "\"Find the Seven... before they find you.\"",
+      "hint": "Repeated across an endless green ocean in every Plomper's dream."
+    },
+    {
+      "id": "ch4-002",
+      "chapter": "IV",
+      "type": "multiple_choice",
+      "question": "What is the name of the island erased from every map?",
+      "options": ["The Citadel of Origins", "The Isle of Echoes", "Ashborn Reach", "The Green Shore"],
+      "answer": "The Isle of Echoes",
+      "hint": "Ships vanish near its waters, and satellites fail overhead."
+    },
+    {
+      "id": "ch4-003",
+      "chapter": "IV",
+      "type": "multiple_choice",
+      "question": "According to legend, The Core can only be...",
+      "options": ["Bought", "Owned", "Chosen", "Destroyed"],
+      "answer": "Chosen",
+      "hint": "\"It couldn't be owned. It couldn't be bought. It could only choose.\""
+    },
+    {
+      "id": "ch5-001",
+      "chapter": "V",
+      "type": "multiple_choice",
+      "question": "How many stone thrones stood at the center of the Isle of Echoes ruins?",
+      "options": ["Five", "Six", "Seven", "Nine"],
+      "answer": "Seven",
+      "hint": "Only one was occupied — by the old guardian."
+    },
+    {
+      "id": "ch5-002",
+      "chapter": "V",
+      "type": "fill_blank",
+      "question": "Finish the guardian's confession: 'The Green Order didn't fall because of the Black Tide... it fell because ___.'",
+      "answer": "one of us opened the gate",
+      "hint": "The First Betrayal — the enemy was never outside the walls."
+    },
+    {
+      "id": "ch5-003",
+      "chapter": "V",
+      "type": "multiple_choice",
+      "question": "What object did the old guardian draw from beneath his cloak?",
+      "options": ["A golden staff", "The black crystal", "A map fragment", "An emerald blade"],
+      "answer": "The black crystal",
+      "hint": "Its appearance turned the sea black and cracked the sky with green lightning."
+    },
+    {
+      "id": "ch6-001",
+      "chapter": "VI",
+      "type": "multiple_choice",
+      "question": "What did the Plompers find inside the ancient chamber instead of gold or a throne?",
+      "options": [
+        "A floating emerald sphere and seven empty pedestals",
+        "A sealed door with no way through",
+        "The Seven Keepers, already gathered",
+        "An empty room"
+      ],
+      "answer": "A floating emerald sphere and seven empty pedestals",
+      "hint": "The Core wasn't waiting for a king."
+    },
+    {
+      "id": "ch6-002",
+      "chapter": "VI",
+      "type": "multiple_choice",
+      "question": "What condition must be met before the Seven can unite, according to the voice in the chamber?",
+      "options": [
+        "The Black Tide must be defeated",
+        "The False Keeper must be revealed",
+        "The Core must fully awaken first",
+        "All seven thrones must glow green"
+      ],
+      "answer": "The False Keeper must be revealed",
+      "hint": "One pedestal glowed black — the traitor's mark had returned."
+    },
+    {
+      "id": "ch6-003",
+      "chapter": "VI",
+      "type": "fill_blank",
+      "question": "Finish the False Keeper's line: 'You've spent all this time searching for The Core... while I've been ___.'",
+      "answer": "searching for you",
+      "hint": "Spoken the moment the shadow stepped out from the darkness."
+    },
+    {
+      "id": "ch7-001",
+      "chapter": "VII",
+      "type": "multiple_choice",
+      "question": "What is the name of the floating ancient city revealed in the Core's vision?",
+      "options": ["The Isle of Echoes", "The Emerald Spire", "The Citadel of Origins", "The Green Sanctum"],
+      "answer": "The Citadel of Origins",
+      "hint": "Seven emerald towers surround its central temple."
+    },
+    {
+      "id": "ch7-002",
+      "chapter": "VII",
+      "type": "multiple_choice",
+      "question": "Which four locations did the path symbols appear in?",
+      "options": [
+        "Lagos, Tokyo, New York, Greenland",
+        "Cairo, Paris, London, Miami",
+        "Lagos, Beijing, Rome, Sydney",
+        "Tokyo, Berlin, New York, Dubai"
+      ],
+      "answer": "Lagos, Tokyo, New York, Greenland",
+      "hint": "Only six of seven paths appeared — the seventh was missing."
+    },
+    {
+      "id": "ch7-003",
+      "chapter": "VII",
+      "type": "multiple_choice",
+      "question": "What did the emerald symbols on every Plomper's mark eventually align into?",
+      "options": ["Words", "Coordinates", "A new prophecy", "A countdown"],
+      "answer": "Coordinates",
+      "hint": "This was called the Last Signal."
+    },
+    {
+      "id": "ch7-004",
+      "chapter": "VII",
+      "type": "fill_blank",
+      "question": "Complete the False Keeper's final line in Chapter VII: 'Good... now they can finally ___.'",
+      "answer": "find me",
+      "hint": "Spoken from the shadows as the seventh path opened."
+    }
+  ]
+}

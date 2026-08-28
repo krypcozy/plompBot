@@ -1,0 +1,467 @@
+{
+  "311479019": {
+    "username": "NRachm",
+    "firstName": "NuruLR",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "messages": 0,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 0,
+    "lastActiveDate": null,
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 0,
+    "dailyXpEarned": 0,
+    "dailyXpDate": null,
+    "recentMessageHashes": [],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "1087968824": {
+    "username": "GroupAnonymousBot",
+    "firstName": "Group",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 60,
+      "community": 50
+    },
+    "seasonXP": {
+      "chronicles": 60,
+      "community": 50
+    },
+    "messages": 19,
+    "questionsAnswered": 3,
+    "correctAnswers": 1,
+    "streak": 1,
+    "lastActiveDate": "2026-08-25",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787665074938,
+    "dailyXpEarned": 4,
+    "dailyXpDate": "2026-08-25",
+    "recentMessageHashes": [
+      "84579ffd50d088537a131a9c8533fee9",
+      "5825f2059fc01d9c9cc024e4ec1ebe78",
+      "8aab603ba4f9c7afdab0a187affa6b3c",
+      "88a1e365c6c49d98ae467b0d8ac1b13e",
+      "d3b9f75895761236ae1c23321d247429"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 1
+  },
+  "1167675878": {
+    "username": "Wan_covalent",
+    "firstName": "Wan",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "messages": 0,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 0,
+    "lastActiveDate": null,
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 0,
+    "dailyXpEarned": 0,
+    "dailyXpDate": null,
+    "recentMessageHashes": [],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "1238384546": {
+    "username": "smitske",
+    "firstName": "Kevin",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 15
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 15
+    },
+    "messages": 3,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-23",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787480185098,
+    "dailyXpEarned": 15,
+    "dailyXpDate": "2026-08-23",
+    "recentMessageHashes": [
+      "530ba68304b02b1b027f192f956cf061",
+      "3fe2f3f69ad7a26b689e49ad8d5010c9",
+      "08e443737a3044f955f4d382be6c5725"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "7872076726": {
+    "username": "STRANGECOZY",
+    "firstName": "COZY",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 100
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 100
+    },
+    "messages": 0,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 0,
+    "lastActiveDate": null,
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 0,
+    "dailyXpEarned": 0,
+    "dailyXpDate": "2026-08-25",
+    "recentMessageHashes": [],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0,
+    "connectFourWins": 1
+  },
+  "6837280862": {
+    "username": null,
+    "firstName": "SWAG",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 2
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 2
+    },
+    "messages": 1,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-23",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787508851417,
+    "dailyXpEarned": 2,
+    "dailyXpDate": "2026-08-23",
+    "recentMessageHashes": [
+      "d32b549d98b2b437dc847116c2cb8019"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "7542391674": {
+    "username": "UGLYDEFI",
+    "firstName": "UGLYDEFI",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 470,
+      "community": 175
+    },
+    "seasonXP": {
+      "chronicles": 470,
+      "community": 175
+    },
+    "messages": 18,
+    "questionsAnswered": 9,
+    "correctAnswers": 4,
+    "streak": 1,
+    "lastActiveDate": "2026-08-25",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787665344597,
+    "dailyXpEarned": 13,
+    "dailyXpDate": "2026-08-25",
+    "recentMessageHashes": [
+      "4005698b7e288cf318bb1cedeecf9173",
+      "c3690bca0c1bbf99ed900638756c15b4",
+      "8e0598e4fe5cd85d7e2653eb1fe6ef5d",
+      "e081452786718536f319db9f1b192d40",
+      "049d0404195017316632ea8ce061bcd9"
+    ],
+    "fastTypingWins": 1,
+    "riddlesSolved": 4,
+    "connectFourWins": 1
+  },
+  "6924881918": {
+    "username": "Gold_Node",
+    "firstName": "GoldNode™",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 60,
+      "community": 136
+    },
+    "seasonXP": {
+      "chronicles": 60,
+      "community": 136
+    },
+    "messages": 3,
+    "questionsAnswered": 2,
+    "correctAnswers": 1,
+    "streak": 1,
+    "lastActiveDate": "2026-08-25",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787663600249,
+    "dailyXpEarned": 2,
+    "dailyXpDate": "2026-08-25",
+    "recentMessageHashes": [
+      "85cf9032d75e051a688582431ef7d8ff",
+      "79ab6630a7e575384e1711e2fca51b55",
+      "cde330c881cdc0abe7b2ac4f01b65d1a"
+    ],
+    "fastTypingWins": 1,
+    "riddlesSolved": 1
+  },
+  "8183323225": {
+    "username": "ayoprotocol",
+    "firstName": "Ay",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "messages": 0,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 0,
+    "lastActiveDate": null,
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 0,
+    "dailyXpEarned": 0,
+    "dailyXpDate": null,
+    "recentMessageHashes": [],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "7424933323": {
+    "username": "sugarplum0333",
+    "firstName": "šügårpłüm",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 2
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 2
+    },
+    "messages": 1,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-21",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787321555073,
+    "dailyXpEarned": 2,
+    "dailyXpDate": "2026-08-21",
+    "recentMessageHashes": [
+      "56c80e2c18ea545938fcc48de6943665"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "6167722753": {
+    "username": "kendrickjamal2",
+    "firstName": "Kendrick",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 5
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 5
+    },
+    "messages": 1,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-23",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787481215075,
+    "dailyXpEarned": 5,
+    "dailyXpDate": "2026-08-23",
+    "recentMessageHashes": [
+      "659d5bd6b5846211030a277da9e7a090"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "8205542844": {
+    "username": "queen_143i",
+    "firstName": "🦋⃟🇲 ɑɑɧꀤ🦋⃟🖤",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 111
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 111
+    },
+    "messages": 4,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-25",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787665382244,
+    "dailyXpEarned": 9,
+    "dailyXpDate": "2026-08-25",
+    "recentMessageHashes": [
+      "eef1362d4bcc22576e686e52c060959d",
+      "aca93889314cd15db89a737b9ea8d142",
+      "1d7b71cd4da0f49eef7e25b6944f5ace",
+      "a354b8798201f9084c102a9bf32b4e14"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0,
+    "ticTacToeWins": 2
+  },
+  "7745783924": {
+    "username": "FrancisHQ2",
+    "firstName": "FRANCIS ⚡️",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 4
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 4
+    },
+    "messages": 2,
+    "questionsAnswered": 1,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-23",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787509267136,
+    "dailyXpEarned": 4,
+    "dailyXpDate": "2026-08-23",
+    "recentMessageHashes": [
+      "2f3f3c45dd63faea7d645037f6cea052",
+      "006d18c383902934c10d2f88da341123"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "8276783060": {
+    "username": "Gemini100x",
+    "firstName": "GEMINI💢",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 18
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 18
+    },
+    "messages": 6,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-23",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787511956673,
+    "dailyXpEarned": 18,
+    "dailyXpDate": "2026-08-23",
+    "recentMessageHashes": [
+      "40a3834dbb1829c54b14a43926471df2",
+      "79b0d8f3fb7662e7c896d74736c200d5",
+      "0f31c095f181e17949a9255652b6e0ec",
+      "45b14070fefc0ee15e2a076ea0388c06",
+      "d5a6a33ba33acf97fe8dfb8e50e17357"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0
+  },
+  "7876446285": {
+    "username": "real_decent1",
+    "firstName": "𝑫𝑬𝑪𝑬𝑵𝑻",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 0
+    },
+    "messages": 0,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 0,
+    "lastActiveDate": null,
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 0,
+    "dailyXpEarned": 0,
+    "dailyXpDate": null,
+    "recentMessageHashes": [],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0,
+    "ticTacToeWins": 0,
+    "connectFourWins": 0
+  },
+  "7971168380": {
+    "username": "plqtforn",
+    "firstName": "Eliana",
+    "faction": "Unaligned",
+    "lifetimeXP": {
+      "chronicles": 0,
+      "community": 2
+    },
+    "seasonXP": {
+      "chronicles": 0,
+      "community": 2
+    },
+    "messages": 1,
+    "questionsAnswered": 0,
+    "correctAnswers": 0,
+    "streak": 1,
+    "lastActiveDate": "2026-08-25",
+    "mysteryRewards": 0,
+    "chaptersCompleted": 0,
+    "lastMessageTimestamp": 1787663599979,
+    "dailyXpEarned": 2,
+    "dailyXpDate": "2026-08-25",
+    "recentMessageHashes": [
+      "53080467654a298f11744d2a632203d5"
+    ],
+    "fastTypingWins": 0,
+    "riddlesSolved": 0,
+    "ticTacToeWins": 0,
+    "connectFourWins": 0
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "adminIds": [
+    7872076726,
+    7542391674,
+    6924881918
+  ],
+  "primaryChatId": 7542391674,
+  "xp": {
+    "message_normal": 2,
+    "message_meaningful": 5,
+    "story_answer_correct": 25,
+    "story_answer_first": 50,
+    "riddle_solved": 40,
+    "riddle_first_bonus": 20,
+    "daily_mission": 100,
+    "chapter_mission": 150,
+    "minigame_win_min": 50,
+    "minigame_win_max": 150,
+    "hidden_clue": 100,
+    "streak_3day": 50,
+    "streak_7day": 200
+  },
+  "antiSpam": {
+    "cooldownSeconds": 45,
+    "minMessageLength": 8,
+    "minWordCount": 3,
+    "dailyXpCap": 500,
+    "duplicateWindow": 5
+  },
+  "fastTyping": {
+    "xpReward": 80,
+    "timeLimitSeconds": 30
+  },
+  "ashbornTrial": {
+    "rounds": 4,
+    "roundTimeSeconds": 20,
+    "xpPerCorrect": 30,
+    "firstBonus": 15,
+    "completionBonus": 50
+  },
+  "hiddenClue": {
+    "enabled": true,
+    "triggerChance": 0.01,
+    "minGapHours": 3,
+    "maxPerDay": 2,
+    "xpReward": 100,
+    "answerWindowSeconds": 90
+  },
+  "weeklyDigest": {
+    "enabled": true,
+    "dayOfWeek": 1,
+    "hourUTC": 18
+  },
+  "autoEvents": {
+    "enabled": true,
+    "intervalMinutes": 60,
+    "types": [
+      "fasttyping",
+      "trial",
+      "riddle"
+    ]
+  },
+  "season": {
+    "number": 1,
+    "name": "THE SEARCH FOR THE CORE",
+    "startDate": "2026-08-17",
+    "durationDays": 30
+  }
+}
