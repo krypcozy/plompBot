@@ -349,10 +349,20 @@ bot.command('whoami', (ctx) => {
 
 bot.command('setchat', (ctx) => {
   if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+
+  const suppliedChatId = ctx.message.text.trim().split(/\s+/)[1];
+  const chatId = suppliedChatId ? Number(suppliedChatId) : ctx.chat.id;
+  if (!Number.isSafeInteger(chatId) || chatId === 0) {
+    return ctx.reply('Use /setchat in the community, or provide its numeric Telegram chat ID: /setchat -1001234567890');
+  }
+  if (!suppliedChatId && ctx.chat.type === 'private') {
+    return ctx.reply('This is a private chat. Run /setchat in the community you want to register, or use /setchat <community_chat_id>.');
+  }
+
   const settings = loadSettings();
-  settings.primaryChatId = ctx.chat.id;
+  settings.primaryChatId = chatId;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  ctx.reply('✅ This chat is now registered for the weekly digest auto-post.');
+  ctx.reply(`✅ Chat ${chatId} is now registered for weekly digests and automatic event drops.`);
 });
 
 bot.command('digest', async (ctx) => {
