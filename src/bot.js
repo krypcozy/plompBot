@@ -798,24 +798,23 @@ bot.command('help', (ctx) => {
   ].join('\n'));
 });
 
-async function startBot() {
-  try {
-    await bot.launch();
-    console.log('🫧 Plomp Chronicles bot is online.');
+bot.catch((err) => {
+  console.error(`[bot] Update handling failed: ${err.message}`);
+});
 
-    await bot.telegram.setMyCommands(BOT_COMMANDS);
-    console.log('Telegram command menu registered.');
-
-    // Do not start background posters until this process owns Telegram polling.
-    startScheduler(bot);
-    startAutoEvents(bot);
-  } catch (err) {
-    console.error(`Could not start Telegram polling: ${err.message}`);
+const launchPromise = bot.launch();
+launchPromise
+  .then(() => console.log('🫧 Plomp Chronicles bot stopped.'))
+  .catch((err) => {
+    console.error(`[bot] Telegram polling stopped: ${err.message}`);
     process.exitCode = 1;
-  }
-}
+  });
 
-startBot();
+bot.telegram.setMyCommands(BOT_COMMANDS)
+  .then(() => console.log('Telegram command menu registered.'))
+  .catch((err) => console.error('Could not register Telegram command menu:', err.message));
+startScheduler(bot);
+startAutoEvents(bot);
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
