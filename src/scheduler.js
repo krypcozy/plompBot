@@ -3,7 +3,7 @@ const path = require('path');
 const { loadSettings } = require('./xpEngine');
 const { buildLeaderboard, formatLeaderboard } = require('./leaderboards');
 
-const STATE_PATH = path.join(__dirname, '../../data/schedulerState.json');
+const STATE_PATH = path.join(__dirname, '../data/schedulerState.json');
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
 
 function loadState() {

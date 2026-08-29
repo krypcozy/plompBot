@@ -51,8 +51,6 @@ const BOT_COMMANDS = [
 ];
 
 const SETTINGS_PATH = path.join(__dirname, '../config/settings.json');
-const TTT_BOARD_IMAGE = path.join(__dirname, '../assets/games/tictactoe-board.jpg');
-const C4_BOARD_IMAGE = path.join(__dirname, '../assets/games/connectfour-board.jpg');
 const LOCK_PATH = path.join(__dirname, '../.bot.lock');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -587,7 +585,7 @@ async function startTicTacToeInChat(ctx) {
   };
   const result = ticTacToe.startChallenge(ctx.chat.id, editFn);
   if (!result) return ctx.reply('A Tic-Tac-Toe challenge is already running here.');
-  const sent = await ctx.replyWithPhoto({ source: TTT_BOARD_IMAGE }, { caption: result.text, reply_markup: result.keyboard });
+  const sent = await ctx.reply(result.text, { reply_markup: result.keyboard });
   if (sent && sent.message_id) ticTacToe.setMessageId(result.session.id, sent.message_id);
 }
 
@@ -601,7 +599,7 @@ async function startConnectFourInChat(ctx) {
   };
   const result = connectFour.startChallenge(ctx.chat.id, editFn);
   if (!result) return ctx.reply('A Connect Four challenge is already running here.');
-  const sent = await ctx.replyWithPhoto({ source: C4_BOARD_IMAGE }, { caption: result.text, reply_markup: result.keyboard });
+  const sent = await ctx.reply(result.text, { reply_markup: result.keyboard });
   if (sent && sent.message_id) connectFour.setMessageId(result.session.id, sent.message_id);
 }
 
@@ -800,13 +798,24 @@ bot.command('help', (ctx) => {
   ].join('\n'));
 });
 
-bot.launch();
-console.log('🫧 Plomp Chronicles bot is online.');
-bot.telegram.setMyCommands(BOT_COMMANDS)
-  .then(() => console.log('Telegram command menu registered.'))
-  .catch((err) => console.error('Could not register Telegram command menu:', err.message));
-startScheduler(bot);
-startAutoEvents(bot);
+async function startBot() {
+  try {
+    await bot.launch();
+    console.log('🫧 Plomp Chronicles bot is online.');
+
+    await bot.telegram.setMyCommands(BOT_COMMANDS);
+    console.log('Telegram command menu registered.');
+
+    // Do not start background posters until this process owns Telegram polling.
+    startScheduler(bot);
+    startAutoEvents(bot);
+  } catch (err) {
+    console.error(`Could not start Telegram polling: ${err.message}`);
+    process.exitCode = 1;
+  }
+}
+
+startBot();
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
