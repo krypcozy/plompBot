@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { Telegraf } = require('telegraf');
+const { Telegraf, Markup } = require('telegraf');
 
 const { getUser, saveUsers } = require('./users');
 const { checkMessage } = require('./antiSpam');
@@ -26,32 +26,7 @@ const SPAM_PRESETS = {
   strict: { cooldownSeconds: 90, minMessageLength: 12, minWordCount: 4, dailyXpCap: 300 }
 };
 
-const BOT_COMMANDS = [
-  { command: 'start', description: 'Open the Plomp Chronicles menu' },
-  { command: 'profile', description: 'View your Plomper profile' },
-  { command: 'leaderboard', description: 'View the season leaderboard' },
-  { command: 'lifetimeboard', description: 'View the lifetime leaderboard' },
-  { command: 'setfaction', description: 'Pledge a faction' },
-  { command: 'settings', description: 'Open group settings (admins)' },
-  { command: 'fasttyping', description: 'Start a Fast Typing challenge (admins)' },
-  { command: 'riddle', description: "Start Keeper's Riddle (admins)" },
-  { command: 'trial', description: 'Start an Ashborn Trial (admins)' },
-  { command: 'tictactoe', description: 'Start a Tic-Tac-Toe game' },
-  { command: 'connectfour', description: 'Start a Connect Four game' },
-  { command: 'setchat', description: 'Register this chat (admins)' },
-  { command: 'digest', description: 'Post the weekly digest now (admins)' },
-  { command: 'autoevents', description: 'Manage automatic events (admins)' },
-  { command: 'setinterval', description: 'Set the auto-event interval (admins)' },
-  { command: 'addxp', description: 'Award XP to a replied user (admins)' },
-  { command: 'setxp', description: 'Change an XP value (admins)' },
-  { command: 'resetseason', description: 'Reset the current season (admins)' },
-  { command: 'export', description: 'Export a leaderboard as CSV (admins)' },
-  { command: 'whoami', description: 'Show your Telegram user ID' },
-  { command: 'help', description: 'Show help and all commands' }
-];
-
 const SETTINGS_PATH = path.join(__dirname, '../config/settings.json');
-const LOCK_PATH = path.join(__dirname, '../.bot.lock');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 if (!BOT_TOKEN) {
@@ -59,43 +34,21 @@ if (!BOT_TOKEN) {
   process.exit(1);
 }
 
-function acquireSingleInstanceLock() {
-  try {
-    const lockFd = fs.openSync(LOCK_PATH, 'wx');
-    fs.writeFileSync(lockFd, String(process.pid));
-    fs.closeSync(lockFd);
-
-    const removeLock = () => {
-      try {
-        if (fs.existsSync(LOCK_PATH)) {
-          fs.unlinkSync(LOCK_PATH);
-        }
-      } catch (err) {
-        // Ignore cleanup errors: the process is already stopping.
-      }
-    };
-
-    process.on('exit', removeLock);
-    process.on('SIGINT', removeLock);
-    process.on('SIGTERM', removeLock);
-    return true;
-  } catch (err) {
-    if (err && err.code === 'EEXIST') {
-      console.error('Another Plomp Chronicles bot instance is already running. Exiting to avoid Telegram polling conflicts.');
-      process.exit(1);
-    }
-    throw err;
-  }
-}
-
-acquireSingleInstanceLock();
-
 const bot = new Telegraf(BOT_TOKEN);
+
+// ---------------------------------------------------------------------
+// GLOBAL ERROR HANDLER — critical: without this, Telegraf's default
+// behavior is to re-throw unhandled errors, which crashes the entire
+// Node process on ANY single bad interaction (missing file, bad input,
+// a Telegram API hiccup, anything). This catches everything at the top
+// level so one broken command/message can never take the whole bot down.
+// ---------------------------------------------------------------------
+bot.catch((err, ctx) => {
+  console.error(`[bot] Unhandled error for update type "${ctx.updateType}" in chat ${ctx.chat ? ctx.chat.id : 'unknown'}:`, err);
+});
 
 function isAdmin(userId) {
   const settings = loadSettings();
-  // Compare as numbers so it doesn't matter whether adminIds was entered
-  // with or without quotes in settings.json.
   return settings.adminIds.map(Number).includes(Number(userId));
 }
 
@@ -123,16 +76,18 @@ bot.on('text', async (ctx, next) => {
   const replyToMessageId = ctx.message.reply_to_message ? ctx.message.reply_to_message.message_id : null;
 
   if (wallet.isPendingWalletInput(userId)) {
-    const result = wallet.registerWallet(userId, text);
-    if (!result.ok) {
-      await ctx.reply(result.reason === 'taken'
-        ? ui.walletTakenText()
-        : ui.walletInvalidText(), ui.walletEnterPromptKeyboard());
+    const canonical = wallet.normalizeSolanaAddress(text);
+    if (!canonical) {
+      await ctx.reply(ui.walletInvalidText(), ui.walletEnterPromptKeyboard());
       return;
     }
+    const result = wallet.registerWallet(userId, canonical);
     wallet.clearPendingWalletInput(userId);
-    const record = wallet.getWallet(userId);
-    await ctx.reply(ui.walletRegisteredText(record, wallet.shortenAddress(result.address)), ui.walletRegisteredKeyboard());
+    if (!result.ok) {
+      await ctx.reply(ui.walletTakenText(), ui.backToMainKeyboard());
+      return;
+    }
+    await ctx.reply(`✅ Wallet registered: ${wallet.shortenAddress(result.address)}\n\nThis is where rewards will be sent.`, ui.backToMainKeyboard());
     return;
   }
 
@@ -151,12 +106,8 @@ bot.on('text', async (ctx, next) => {
       await ctx.reply(`${tag}\n${displayName(meta)} solved the Keeper's Riddle.\n+${result.xp} XP (Chronicles)`);
       return;
     }
-    if (result && result.alreadyAttempted) {
-      await ctx.reply(`⛔ ${displayName(meta)}, you already used your attempt for this question.`);
-      return;
-    }
-    if (result && result.isReplyAttempt) {
-      await ctx.reply('❌ Wrong answer. Keep trying.', { reply_to_message_id: ctx.message.message_id });
+    if (result && result.correct === false && result.isReplyAttempt) {
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} — try again!`);
       return;
     }
   }
@@ -168,12 +119,8 @@ bot.on('text', async (ctx, next) => {
       await ctx.reply(`${tag} — ${displayName(meta)} +${result.xp} XP`);
       return;
     }
-    if (result && result.alreadyAttempted) {
-      await ctx.reply(`⛔ ${displayName(meta)}, you already used your attempt for this round.`);
-      return;
-    }
-    if (result && result.isReplyAttempt) {
-      await ctx.reply('❌ Wrong answer. Keep trying.', { reply_to_message_id: ctx.message.message_id });
+    if (result && result.correct === false && result.isReplyAttempt) {
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} — try again!`);
       return;
     }
   }
@@ -184,19 +131,14 @@ bot.on('text', async (ctx, next) => {
       await ctx.reply(`🟢 CORRECT\n${displayName(meta)} has solved the Keeper's riddle.\n\n🎁 Mystery Reward unlocked.\n+${result.xp} XP (Chronicles)\n\nThe Chronicles continue...`);
       return;
     }
-    if (result && result.alreadyAttempted) {
-      await ctx.reply(`⛔ ${displayName(meta)}, you already used your attempt for this question.`);
-      return;
-    }
-    if (result && result.isReplyAttempt) {
-      await ctx.reply('❌ Wrong answer. Keep trying.', { reply_to_message_id: ctx.message.message_id });
+    if (result && result.correct === false && result.isReplyAttempt) {
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} — try again!`);
       return;
     }
   }
 
-  // Normal community-activity XP flow
   const check = checkMessage(userId, meta, text);
-  if (!check.eligible) return; // spam/cooldown/low-quality — ignored silently
+  if (!check.eligible) return;
 
   const settings = loadSettings();
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -205,7 +147,6 @@ bot.on('text', async (ctx, next) => {
   awardXP(userId, meta, 'community', xpAmount);
   updateStreak(userId, meta);
 
-  // Rare, rate-limited chance to drop an unprompted Secret Question
   const dropped = hiddenClue.maybeTrigger(chatId);
   if (dropped) {
     let clueMsg = `⚠️ SECRET QUESTION\n\nThe Keeper has appeared.\n\n${dropped.question}`;
@@ -214,7 +155,7 @@ bot.on('text', async (ctx, next) => {
     }
     clueMsg += `\n\nFirst person to answer correctly receives a Mystery Reward.`;
     const sent = await ctx.reply(clueMsg);
-    hiddenClue.setMessageId(chatId, sent.message_id);
+    if (sent && sent.message_id) hiddenClue.setMessageId(chatId, sent.message_id);
   }
 });
 
@@ -254,10 +195,10 @@ bot.command('setfaction', (ctx) => {
 });
 
 // ---------------------------------------------------------------------
-// MINI-GAME TRIGGERS (admin-only — Cozy runs these, not automated)
+// MINI-GAME TRIGGERS (admin-only)
 // ---------------------------------------------------------------------
 bot.command('fasttyping', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can start this.');
   const settings = loadSettings();
   const game = fastTyping.startGame(ctx.chat.id);
   if (!game) return ctx.reply('A Fast Typing challenge is already running here.');
@@ -265,15 +206,14 @@ bot.command('fasttyping', (ctx) => {
 });
 
 bot.command('trial', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can start this.');
   const sendMessage = (chatId, text) => bot.telegram.sendMessage(chatId, text);
   const session = ashbornTrial.startTrial(ctx.chat.id, sendMessage);
   if (!session) return ctx.reply('An Ashborn Trial is already running here.');
-  // startTrial posts the first round itself via sendMessage
 });
 
 bot.command('riddle', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can start this.');
   const chapterArg = ctx.message.text.split(' ')[1];
   const game = keepersRiddle.startRiddle(ctx.chat.id, chapterArg);
   if (!game) return ctx.reply("A Keeper's Riddle is already active here.");
@@ -283,16 +223,16 @@ bot.command('riddle', async (ctx) => {
   if (r.options) {
     msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
   }
-  msg += `\n\nAnswer in the chat. First correct gets a bonus.`;
+  msg += `\n\nAnswer in the chat (reply to this message to get "wrong" feedback). First correct gets a bonus.`;
   const sent = await ctx.reply(msg);
-  keepersRiddle.setMessageId(ctx.chat.id, sent.message_id);
+  if (sent && sent.message_id) keepersRiddle.setMessageId(ctx.chat.id, sent.message_id);
 });
 
 // ---------------------------------------------------------------------
 // ADMIN COMMANDS
 // ---------------------------------------------------------------------
 bot.command('addxp', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const parts = ctx.message.text.split(' ');
   const amount = parseInt(parts[parts.length - 1], 10);
   const targetMsg = ctx.message.reply_to_message;
@@ -308,7 +248,7 @@ bot.command('addxp', (ctx) => {
 });
 
 bot.command('setxp', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const parts = ctx.message.text.split(' ');
   const key = parts[1];
   const value = parseInt(parts[2], 10);
@@ -324,13 +264,13 @@ bot.command('setxp', (ctx) => {
 });
 
 bot.command('resetseason', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const { newSeason } = resetSeason();
   ctx.reply(`🏅 Season ${newSeason.number - 1} has ended and been archived.\nSeason ${newSeason.number} begins now.\n\nLifetime XP is untouched — only the season boards reset.`);
 });
 
 bot.command('export', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const arg = (ctx.message.text.split(' ')[1] || 'chronicles').toLowerCase();
   const category = arg.startsWith('comm') ? 'community' : 'chronicles';
   const csv = exportCSV(category, 'season');
@@ -348,85 +288,57 @@ bot.command('whoami', (ctx) => {
 });
 
 bot.command('setchat', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
-
-  const suppliedChatId = ctx.message.text.trim().split(/\s+/)[1];
-  const chatId = suppliedChatId ? Number(suppliedChatId) : ctx.chat.id;
-  if (!Number.isSafeInteger(chatId) || chatId === 0) {
-    return ctx.reply('Use /setchat in the community, or provide its numeric Telegram chat ID: /setchat -1001234567890');
-  }
-  if (!suppliedChatId && ctx.chat.type === 'private') {
-    return ctx.reply('This is a private chat. Run /setchat in the community you want to register, or use /setchat <community_chat_id>.');
-  }
-
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const settings = loadSettings();
-  settings.primaryChatId = chatId;
+  settings.primaryChatId = ctx.chat.id;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  ctx.reply(`✅ Chat ${chatId} is now registered for weekly digests and automatic event drops.`);
+  ctx.reply('✅ This chat is now registered for the weekly digest auto-post.');
 });
 
 bot.command('digest', async (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   await postWeeklyDigest(bot, ctx.chat.id);
 });
 
 bot.command('autoevents', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const arg = (ctx.message.text.split(' ')[1] || '').toLowerCase();
   const settings = loadSettings();
-  if (!settings.autoEvents) {
-    settings.autoEvents = {
-      enabled: false,
-      intervalMinutes: 60,
-      types: ['riddle', 'fasttyping', 'trial']
-    };
-  }
 
   if (arg === 'on') {
     settings.autoEvents.enabled = true;
     fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-    const chatNote = settings.primaryChatId ? '' : '\n\n⚠️ No chat is set yet. Run /setchat here first so the drops go to the right place.';
-    return ctx.reply(`✅ Automatic drops are ON. They will happen every ${settings.autoEvents.intervalMinutes} minutes.${chatNote}`);
+    const chatNote = settings.primaryChatId ? '' : '\n\n⚠️ No chat registered yet — run /setchat here first, or auto-drops have nowhere to go.';
+    return ctx.reply(`✅ Auto-events ON — dropping every ${settings.autoEvents.intervalMinutes} minutes.${chatNote}`);
   }
   if (arg === 'off') {
     settings.autoEvents.enabled = false;
     fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-    return ctx.reply('⛔ Automatic drops are OFF.');
+    return ctx.reply('⛔ Auto-events OFF.');
   }
 
-  const status = settings.autoEvents.enabled ? 'on' : 'off';
-  ctx.reply(`Automatic drops are ${status}.\nEvery ${settings.autoEvents.intervalMinutes} minutes\nGame types: ${settings.autoEvents.types.join(', ')}\nThis chat: ${settings.primaryChatId || 'not set yet'}\n\nUse /autoevents on or /autoevents off`);
+  const status = settings.autoEvents.enabled ? 'ON' : 'OFF';
+  ctx.reply(`Auto-events are currently ${status}.\nInterval: every ${settings.autoEvents.intervalMinutes} minutes\nTypes: ${settings.autoEvents.types.join(', ')}\nTarget chat: ${settings.primaryChatId || 'not set — use /setchat'}\n\nUsage: /autoevents on | off`);
 });
 
 bot.command('setinterval', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const minutes = parseInt(ctx.message.text.split(' ')[1], 10);
   if (isNaN(minutes) || minutes < 5) {
-    return ctx.reply('Use it like this: /setinterval 60\nThat means a drop every hour.\nKeep it at 5 minutes or more so it stays friendly.');
+    return ctx.reply('Usage: /setinterval <minutes>\nMinimum 5 minutes, to keep the group from getting spammy.\nExample: /setinterval 60 — drops an event every hour.');
   }
   const settings = loadSettings();
-  if (!settings.autoEvents) {
-    settings.autoEvents = {
-      enabled: false,
-      intervalMinutes: 60,
-      types: ['riddle', 'fasttyping', 'trial']
-    };
-  }
   settings.autoEvents.intervalMinutes = minutes;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  ctx.reply(`⏱ The drops will now happen every ${minutes} minutes once they are switched on.`);
+  ctx.reply(`⏱ Auto-events will now drop every ${minutes} minutes (once enabled with /autoevents on).`);
 });
 
-bot.start((ctx) => {
-  if (ctx.chat.type !== 'private') return;
-  if (ctx.startPayload === 'wallet') {
-    const existing = wallet.getWallet(ctx.from.id);
-    return existing
-      ? ctx.reply(ui.walletRegisteredText(existing, wallet.shortenAddress(existing.address)), ui.walletRegisteredKeyboard())
-      : ctx.reply(ui.walletEmptyText(), ui.walletEmptyKeyboard());
-  }
-  if (ctx.startPayload === 'rewards') return ctx.reply(ui.rewardsText(), ui.rewardsKeyboard());
-  if (ctx.startPayload === 'profile') return ctx.reply(formatProfile(ctx.from.id, userMeta(ctx)), ui.backToMainKeyboard());
+bot.start(async (ctx) => {
+  const payload = ctx.startPayload;
+  if (payload === 'wallet') return showWalletScreen(ctx);
+  if (payload === 'rewards') return ctx.reply(ui.rewardsText(), ui.rewardsKeyboard());
+  if (payload === 'profile') return ctx.reply(formatProfile(ctx.from.id, userMeta(ctx)), ui.backToMainKeyboard());
+
   ctx.reply(ui.mainMenuText(), ui.mainMenuKeyboard(ctx.botInfo && ctx.botInfo.username, { inGroup: false }));
 });
 
@@ -435,6 +347,9 @@ bot.command('menu', (ctx) => {
   ctx.reply(ui.mainMenuText(), ui.mainMenuKeyboard(ctx.botInfo && ctx.botInfo.username, { inGroup }));
 });
 
+// ---------------------------------------------------------------------
+// PLAYER MENU — button callbacks (works in both DM and group)
+// ---------------------------------------------------------------------
 async function safeEdit(ctx, text, keyboard) {
   try {
     await ctx.editMessageText(text, keyboard);
@@ -444,29 +359,10 @@ async function safeEdit(ctx, text, keyboard) {
   }
 }
 
-async function safeEditCaption(ctx, caption, keyboard) {
-  try {
-    await ctx.editMessageCaption(caption, keyboard);
-  } catch (err) {
-    if (/message is not modified/i.test(err.description || '')) return;
-    await ctx.reply(caption, keyboard);
-  }
-}
-
-bot.action('pmenu:profile', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.reply(formatProfile(ctx.from.id, userMeta(ctx)));
-});
-
 bot.action('pmenu:main', async (ctx) => {
   await ctx.answerCbQuery();
   const inGroup = ctx.chat.type !== 'private';
   await safeEdit(ctx, ui.mainMenuText(), ui.mainMenuKeyboard(ctx.botInfo && ctx.botInfo.username, { inGroup }));
-});
-
-bot.action('pmenu:games', async (ctx) => {
-  await ctx.answerCbQuery();
-  await safeEdit(ctx, ui.gamesMenuText(), ui.gamesMenuKeyboard());
 });
 
 bot.action('pmenu:rankings', async (ctx) => {
@@ -474,13 +370,43 @@ bot.action('pmenu:rankings', async (ctx) => {
   await safeEdit(ctx, ui.rankingsText(), ui.rankingsKeyboard());
 });
 
-for (const category of ['chronicles', 'community']) {
-  bot.action(`pmenu:rankings:${category}`, async (ctx) => {
-    await ctx.answerCbQuery();
-    const title = category === 'chronicles' ? '🧠 CHRONICLES LEADERBOARD — SEASON' : '💬 COMMUNITY ACTIVITY LEADERBOARD — SEASON';
-    await safeEdit(ctx, formatLeaderboard(buildLeaderboard(category, 'season', 10), title), ui.rankingsKeyboard());
-  });
-}
+bot.action('pmenu:rankings:chronicles', async (ctx) => {
+  await ctx.answerCbQuery();
+  const rows = buildLeaderboard('chronicles', 'season', 10);
+  await safeEdit(ctx, formatLeaderboard(rows, '🧠 CHRONICLES — SEASON'), ui.rankingsKeyboard());
+});
+
+bot.action('pmenu:rankings:community', async (ctx) => {
+  await ctx.answerCbQuery();
+  const rows = buildLeaderboard('community', 'season', 10);
+  await safeEdit(ctx, formatLeaderboard(rows, '💬 COMMUNITY — SEASON'), ui.rankingsKeyboard());
+});
+
+bot.action('pmenu:games', async (ctx) => {
+  await ctx.answerCbQuery();
+  await safeEdit(ctx, ui.gamesMenuText(), ui.gamesMenuKeyboard());
+});
+
+bot.action('pmenu:games:tictactoe', async (ctx) => {
+  await ctx.answerCbQuery();
+  if (ctx.chat.type === 'private') {
+    return ctx.reply('Tic-Tac-Toe is a group game — open it in your community chat instead.');
+  }
+  await startTicTacToeInChat(ctx);
+});
+
+bot.action('pmenu:games:connectfour', async (ctx) => {
+  await ctx.answerCbQuery();
+  if (ctx.chat.type === 'private') {
+    return ctx.reply('Connect Four is a group game — open it in your community chat instead.');
+  }
+  await startConnectFourInChat(ctx);
+});
+
+bot.action('pmenu:profile', async (ctx) => {
+  await ctx.answerCbQuery();
+  await safeEdit(ctx, formatProfile(ctx.from.id, userMeta(ctx)), ui.backToMainKeyboard());
+});
 
 bot.action('pmenu:rewards', async (ctx) => {
   await ctx.answerCbQuery();
@@ -489,139 +415,202 @@ bot.action('pmenu:rewards', async (ctx) => {
 
 bot.action('pmenu:help', async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.reply('ℹ️ Use /profile for your stats, /leaderboard for rankings, /tictactoe or /connectfour to challenge the group, and /help for all commands.');
+  await sendHelpText(ctx);
 });
 
 bot.action('pmenu:wallet', async (ctx) => {
   await ctx.answerCbQuery();
-  const existing = wallet.getWallet(ctx.from.id);
   await showWalletScreen(ctx);
 });
 
-bot.action('wallet:enter', async (ctx) => {
-  await ctx.answerCbQuery();
-  wallet.beginWalletInput(ctx.from.id);
-  await ctx.editMessageText(ui.walletEnterPromptText(), ui.walletEnterPromptKeyboard());
-});
-
-bot.action('wallet:remove', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.editMessageText(ui.walletRemoveConfirmText(), ui.walletRemoveConfirmKeyboard());
-});
-
-bot.action('wallet:change', async (ctx) => {
-  await ctx.answerCbQuery();
-  wallet.beginWalletInput(ctx.from.id);
-  await ctx.editMessageText(ui.walletEnterPromptText(), ui.walletEnterPromptKeyboard());
-});
-
-bot.action('wallet:cancel_input', async (ctx) => {
-  wallet.clearPendingWalletInput(ctx.from.id);
-  await ctx.answerCbQuery();
-  const existing = wallet.getWallet(ctx.from.id);
-  await ctx.editMessageText(existing ? ui.walletRegisteredText(existing, wallet.shortenAddress(existing.address)) : ui.walletEmptyText(), existing ? ui.walletRegisteredKeyboard() : ui.walletEmptyKeyboard());
-});
-
-bot.action('wallet:remove_confirm', async (ctx) => {
-  wallet.removeWallet(ctx.from.id);
-  await ctx.answerCbQuery('Wallet removed.');
-  await ctx.editMessageText(ui.walletEmptyText(), ui.walletEmptyKeyboard());
-});
-
-bot.action('wallet:remove_cancel', async (ctx) => {
-  await ctx.answerCbQuery();
-  const existing = wallet.getWallet(ctx.from.id);
-  await ctx.editMessageText(existing ? ui.walletRegisteredText(existing, wallet.shortenAddress(existing.address)) : ui.walletEmptyText(), existing ? ui.walletRegisteredKeyboard() : ui.walletEmptyKeyboard());
-});
-
+// ---------------------------------------------------------------------
+// WALLET
+// ---------------------------------------------------------------------
 async function showWalletScreen(ctx) {
   if (ctx.chat.type !== 'private') {
     return ctx.reply(ui.walletGroupText(), ui.walletGroupKeyboard(ctx.botInfo && ctx.botInfo.username));
   }
   const record = wallet.getWallet(ctx.from.id);
-  if (!record) return ctx.reply(ui.walletEmptyText(), ui.walletEmptyKeyboard());
-  return ctx.reply(ui.walletRegisteredText(record, wallet.shortenAddress(record.address)), ui.walletRegisteredKeyboard());
+  if (!record) {
+    return ctx.reply(ui.walletEmptyText(), ui.walletEmptyKeyboard());
+  }
+  const short = wallet.shortenAddress(record.address);
+  return ctx.reply(ui.walletRegisteredText(record, short), ui.walletRegisteredKeyboard());
 }
 
 bot.command('wallet', (ctx) => showWalletScreen(ctx));
 
-bot.action('pmenu:games:tictactoe', async (ctx) => {
+bot.action('wallet:enter', async (ctx) => {
   await ctx.answerCbQuery();
-  if (ctx.chat.type === 'private') return ctx.reply('Tic-Tac-Toe is a group game — open it in your community chat instead.');
-  await startTicTacToeInChat(ctx);
+  wallet.beginWalletInput(ctx.from.id);
+  await safeEdit(ctx, ui.walletEnterPromptText(), ui.walletEnterPromptKeyboard());
 });
 
-bot.action('pmenu:games:connectfour', async (ctx) => {
+bot.action('wallet:change', async (ctx) => {
   await ctx.answerCbQuery();
-  if (ctx.chat.type === 'private') return ctx.reply('Connect Four is a group game — open it in your community chat instead.');
-  await startConnectFourInChat(ctx);
+  wallet.beginWalletInput(ctx.from.id);
+  await safeEdit(ctx, ui.walletEnterPromptText(), ui.walletEnterPromptKeyboard());
 });
 
-bot.action(/^ttt:join:([a-z0-9]+)$/, async (ctx) => {
-  const result = ticTacToe.join(ctx.match[1], ctx.from.id, userMeta(ctx));
-  if (!result.ok) return ctx.answerCbQuery('You cannot join this game.', { show_alert: true });
-  await ctx.answerCbQuery();
-  await safeEditCaption(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
+bot.action('wallet:cancel_input', async (ctx) => {
+  wallet.clearPendingWalletInput(ctx.from.id);
+  await ctx.answerCbQuery('Cancelled.');
+  await showWalletScreen(ctx);
 });
 
-bot.action(/^ttt:move:([a-z0-9]+):(\d)$/, async (ctx) => {
-  const result = ticTacToe.move(ctx.match[1], ctx.from.id, Number(ctx.match[2]));
-  if (!result.ok) return ctx.answerCbQuery('That move is not available.', { show_alert: true });
+bot.action('wallet:remove', async (ctx) => {
   await ctx.answerCbQuery();
-  await safeEditCaption(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
+  await safeEdit(ctx, ui.walletRemoveConfirmText(), ui.walletRemoveConfirmKeyboard());
 });
 
-bot.action(/^c4:join:([a-z0-9]+)$/, async (ctx) => {
-  const result = connectFour.join(ctx.match[1], ctx.from.id, userMeta(ctx));
-  if (!result.ok) return ctx.answerCbQuery('You cannot join this game.', { show_alert: true });
-  await ctx.answerCbQuery();
-  await safeEditCaption(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
+bot.action('wallet:remove_confirm', async (ctx) => {
+  wallet.removeWallet(ctx.from.id);
+  await ctx.answerCbQuery('Wallet removed.');
+  await safeEdit(ctx, ui.walletEmptyText(), ui.walletEmptyKeyboard());
 });
 
-bot.action(/^c4:move:([a-z0-9]+):(\d)$/, async (ctx) => {
-  const result = connectFour.move(ctx.match[1], ctx.from.id, Number(ctx.match[2]));
-  if (!result.ok) return ctx.answerCbQuery('That move is not available.', { show_alert: true });
-  await ctx.answerCbQuery();
-  await safeEditCaption(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
+bot.action('wallet:remove_cancel', async (ctx) => {
+  await ctx.answerCbQuery('Cancelled.');
+  await showWalletScreen(ctx);
 });
 
+// ---------------------------------------------------------------------
+// TIC-TAC-TOE
+// ---------------------------------------------------------------------
 async function startTicTacToeInChat(ctx) {
-  const editFn = async (chatId, messageId, caption, keyboard) => {
+  const chatId = ctx.chat.id;
+  const editFn = async (cid, messageId, text, keyboard) => {
     try {
-      await bot.telegram.editMessageCaption(chatId, messageId, undefined, caption, { reply_markup: keyboard });
+      await bot.telegram.editMessageText(cid, messageId, undefined, text, { reply_markup: keyboard });
     } catch (_err) {
-      // Telegram may reject an edit after the challenge has ended.
+      // message may already be gone/unmodifiable — safe to ignore
     }
   };
-  const result = ticTacToe.startChallenge(ctx.chat.id, editFn);
+  const result = ticTacToe.startChallenge(chatId, editFn);
   if (!result) return ctx.reply('A Tic-Tac-Toe challenge is already running here.');
   const sent = await ctx.reply(result.text, { reply_markup: result.keyboard });
   if (sent && sent.message_id) ticTacToe.setMessageId(result.session.id, sent.message_id);
 }
 
+bot.command('tictactoe', (ctx) => startTicTacToeInChat(ctx));
+
+bot.action(/^ttt:join:(.+)$/, async (ctx) => {
+  const sessionId = ctx.match[1];
+  const result = ticTacToe.join(sessionId, ctx.from.id, userMeta(ctx));
+  if (!result.ok) {
+    const messages = {
+      'already-joined': "You're already in this game.",
+      'not-waiting': 'This game already started.',
+      'invalid-session': 'This game no longer exists.'
+    };
+    return ctx.answerCbQuery(messages[result.reason] || "Can't join right now.", { show_alert: true });
+  }
+  await ctx.answerCbQuery(result.started ? 'Game on!' : 'Joined — waiting for an opponent.');
+  await safeEdit(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
+});
+
+bot.action(/^ttt:move:(.+):(\d+)$/, async (ctx) => {
+  const sessionId = ctx.match[1];
+  const cell = parseInt(ctx.match[2], 10);
+  const result = ticTacToe.move(sessionId, ctx.from.id, cell);
+  if (!result.ok) {
+    const messages = {
+      outsider: "You're not in this game.",
+      'not-your-turn': "It's not your turn.",
+      occupied: 'That square is taken.',
+      'not-active': 'This game has ended.',
+      'invalid-session': 'This game no longer exists.'
+    };
+    return ctx.answerCbQuery(messages[result.reason] || "Can't do that.", { show_alert: true });
+  }
+  await ctx.answerCbQuery();
+  await safeEdit(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
+});
+
+// ---------------------------------------------------------------------
+// CONNECT FOUR
+// ---------------------------------------------------------------------
 async function startConnectFourInChat(ctx) {
-  const editFn = async (chatId, messageId, caption, keyboard) => {
+  const chatId = ctx.chat.id;
+  const editFn = async (cid, messageId, text, keyboard) => {
     try {
-      await bot.telegram.editMessageCaption(chatId, messageId, undefined, caption, { reply_markup: keyboard });
+      await bot.telegram.editMessageText(cid, messageId, undefined, text, { reply_markup: keyboard });
     } catch (_err) {
-      // Telegram may reject an edit after the challenge has ended.
+      // message may already be gone/unmodifiable — safe to ignore
     }
   };
-  const result = connectFour.startChallenge(ctx.chat.id, editFn);
+  const result = connectFour.startChallenge(chatId, editFn);
   if (!result) return ctx.reply('A Connect Four challenge is already running here.');
   const sent = await ctx.reply(result.text, { reply_markup: result.keyboard });
   if (sent && sent.message_id) connectFour.setMessageId(result.session.id, sent.message_id);
 }
 
-bot.command('tictactoe', (ctx) => {
-  if (ctx.chat.type === 'private') return ctx.reply('Tic-Tac-Toe is a group game — open it in your community chat instead.');
-  return startTicTacToeInChat(ctx);
+bot.command(['connect4', 'connectfour'], (ctx) => startConnectFourInChat(ctx));
+
+bot.action(/^c4:join:(.+)$/, async (ctx) => {
+  const sessionId = ctx.match[1];
+  const result = connectFour.join(sessionId, ctx.from.id, userMeta(ctx));
+  if (!result.ok) {
+    const messages = {
+      'already-joined': "You're already in this game.",
+      'not-waiting': 'This game already started.',
+      'invalid-session': 'This game no longer exists.'
+    };
+    return ctx.answerCbQuery(messages[result.reason] || "Can't join right now.", { show_alert: true });
+  }
+  await ctx.answerCbQuery(result.started ? 'Game on!' : 'Joined — waiting for an opponent.');
+  await safeEdit(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
 });
 
-bot.command('connectfour', (ctx) => {
-  if (ctx.chat.type === 'private') return ctx.reply('Connect Four is a group game — open it in your community chat instead.');
-  return startConnectFourInChat(ctx);
+bot.action(/^c4:move:(.+):(\d+)$/, async (ctx) => {
+  const sessionId = ctx.match[1];
+  const column = parseInt(ctx.match[2], 10);
+  const result = connectFour.move(sessionId, ctx.from.id, column);
+  if (!result.ok) {
+    const messages = {
+      outsider: "You're not in this game.",
+      'not-your-turn': "It's not your turn.",
+      full: 'That column is full — try another.',
+      'not-active': 'This game has ended.',
+      'invalid-session': 'This game no longer exists.'
+    };
+    return ctx.answerCbQuery(messages[result.reason] || "Can't do that.", { show_alert: true });
+  }
+  await ctx.answerCbQuery();
+  await safeEdit(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
 });
+
+async function sendHelpText(ctx) {
+  await ctx.reply([
+    '🫧 PLOMP CHRONICLES BOT',
+    '',
+    'PLAYER COMMANDS',
+    '/menu — open the button menu (Rankings, Games, Profile, Wallet, Rewards, Help)',
+    '/profile — view your Plomper profile',
+    '/leaderboard chronicles|community — this season\'s top 10',
+    '/lifetimeboard chronicles|community — all-time top 10',
+    '/setfaction <Green Order|Black Tide|Ashborn|Keepers> — pledge your faction',
+    '/wallet — register the Solana address rewards get sent to',
+    '/tictactoe — start a Tic-Tac-Toe challenge in this chat',
+    '/connect4 — start a Connect Four challenge in this chat',
+    '',
+    'ADMIN COMMANDS',
+    '/settings — open the button-based group settings panel (Auto-Events, Weekly Digest, Anti-Spam, Reset)',
+    '/fasttyping — start a Fast Typing challenge',
+    '/riddle [chapter] — start a Keeper\'s Riddle (e.g. /riddle III)',
+    '/trial — start an Ashborn Trial (chained rapid-fire questions)',
+    '/setchat — register this chat for the weekly auto-digest AND auto-events',
+    '/digest — manually post the weekly leaderboard + Mystery Box digest now (for testing)',
+    '/autoevents on|off — turn automatic riddle/fast-typing/trial drops on or off',
+    '/setinterval <minutes> — how often auto-events drop (e.g. 60 = hourly, like ChatFight)',
+    '/addxp <chronicles|community> <amount> — reply to a user to award XP',
+    '/setxp <key> <value> — adjust an XP value',
+    '/resetseason — archive current season, start a new one',
+    '/export chronicles|community — download season leaderboard as CSV',
+    '',
+    'Note: a Hidden Clue ("Secret Question") occasionally appears on its own — no command needed, it\'s a rare surprise for whoever is in chat. Reply directly to any active riddle/trial question and a wrong guess will let you know so you can try again.'
+  ].join('\n'));
+}
 
 async function renderGroupPanel(ctx, screen) {
   const settings = loadSettings();
@@ -651,30 +640,58 @@ function adminAction(handler) {
 }
 
 bot.command('settings', (ctx) => {
-  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council can do this.');
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
   const settings = loadSettings();
   ctx.reply(ui.groupSettingsText(settings), ui.groupSettingsKeyboard());
 });
 
-for (const [action, screen] of [
-  ['grp:main', 'main'], ['grp:autoevents', 'autoevents'], ['grp:digest', 'digest'],
-  ['grp:antispam', 'antispam'], ['grp:games', 'games'], ['grp:reset_confirm', 'reset_confirm']
-]) {
-  bot.action(action, adminAction(async (ctx) => {
-    await ctx.answerCbQuery();
-    await renderGroupPanel(ctx, screen);
-  }));
-}
+bot.action('grp:main', adminAction(async (ctx) => {
+  await ctx.answerCbQuery();
+  await renderGroupPanel(ctx, 'main');
+}));
+
+bot.action('grp:autoevents', adminAction(async (ctx) => {
+  await ctx.answerCbQuery();
+  await renderGroupPanel(ctx, 'autoevents');
+}));
+
+bot.action('grp:digest', adminAction(async (ctx) => {
+  await ctx.answerCbQuery();
+  await renderGroupPanel(ctx, 'digest');
+}));
+
+bot.action('grp:antispam', adminAction(async (ctx) => {
+  await ctx.answerCbQuery();
+  await renderGroupPanel(ctx, 'antispam');
+}));
+
+bot.action('grp:games', adminAction(async (ctx) => {
+  await ctx.answerCbQuery();
+  await renderGroupPanel(ctx, 'games');
+}));
+
+bot.action('grp:reset_confirm', adminAction(async (ctx) => {
+  await ctx.answerCbQuery();
+  await renderGroupPanel(ctx, 'reset_confirm');
+}));
 
 bot.action('grp:reset_do', adminAction(async (ctx) => {
   const { newSeason } = resetSeason();
   await ctx.answerCbQuery('Season reset.', { show_alert: true });
-  await ctx.editMessageText(`🏅 Season ${newSeason.number - 1} archived. Season ${newSeason.number} begins now.\n\nLifetime XP is untouched.`, ui.groupSettingsKeyboard());
+  try {
+    await ctx.editMessageText(`🏅 Season ${newSeason.number - 1} archived. Season ${newSeason.number} begins now.\n\nLifetime XP is untouched.`, ui.groupSettingsKeyboard());
+  } catch (err) {
+    if (!/message is not modified/i.test(err.description || '')) throw err;
+  }
 }));
 
 bot.action('grp:close', adminAction(async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.editMessageText('Settings closed. Run /settings anytime to reopen.');
+  try {
+    await ctx.editMessageText('Settings closed. Run /settings anytime to reopen.');
+  } catch (err) {
+    if (!/message is not modified/i.test(err.description || '')) throw err;
+  }
 }));
 
 bot.action('auto:on', adminAction(async (ctx) => {
@@ -694,39 +711,46 @@ bot.action('auto:off', adminAction(async (ctx) => {
 }));
 
 bot.action(/^auto:interval:(\d+)$/, adminAction(async (ctx) => {
+  const minutes = parseInt(ctx.match[1], 10);
   const settings = loadSettings();
-  settings.autoEvents.intervalMinutes = parseInt(ctx.match[1], 10);
+  settings.autoEvents.intervalMinutes = minutes;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  await ctx.answerCbQuery();
+  await ctx.answerCbQuery(`Interval set to ${minutes} min`);
   await renderGroupPanel(ctx, 'autoevents');
 }));
 
 bot.action(/^auto:type:(riddle|fasttyping|trial)$/, adminAction(async (ctx) => {
-  const settings = loadSettings();
   const type = ctx.match[1];
-  const index = settings.autoEvents.types.indexOf(type);
-  if (index === -1) settings.autoEvents.types.push(type);
-  else settings.autoEvents.types.splice(index, 1);
+  const settings = loadSettings();
+  const idx = settings.autoEvents.types.indexOf(type);
+  if (idx === -1) settings.autoEvents.types.push(type);
+  else settings.autoEvents.types.splice(idx, 1);
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
   await ctx.answerCbQuery();
   await renderGroupPanel(ctx, 'autoevents');
 }));
 
-for (const [action, enabled] of [['digest:on', true], ['digest:off', false]]) {
-  bot.action(action, adminAction(async (ctx) => {
-    const settings = loadSettings();
-    settings.weeklyDigest.enabled = enabled;
-    fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-    await ctx.answerCbQuery();
-    await renderGroupPanel(ctx, 'digest');
-  }));
-}
+bot.action('digest:on', adminAction(async (ctx) => {
+  const settings = loadSettings();
+  settings.weeklyDigest.enabled = true;
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  await ctx.answerCbQuery('Weekly Digest ON');
+  await renderGroupPanel(ctx, 'digest');
+}));
+
+bot.action('digest:off', adminAction(async (ctx) => {
+  const settings = loadSettings();
+  settings.weeklyDigest.enabled = false;
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  await ctx.answerCbQuery('Weekly Digest OFF');
+  await renderGroupPanel(ctx, 'digest');
+}));
 
 bot.action('digest:setchat', adminAction(async (ctx) => {
   const settings = loadSettings();
   settings.primaryChatId = ctx.chat.id;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  await ctx.answerCbQuery();
+  await ctx.answerCbQuery('This chat is now registered.');
   await renderGroupPanel(ctx, 'digest');
 }));
 
@@ -736,13 +760,17 @@ bot.action('digest:postnow', adminAction(async (ctx) => {
 }));
 
 bot.action(/^spam:(relaxed|normal|strict)$/, adminAction(async (ctx) => {
+  const level = ctx.match[1];
   const settings = loadSettings();
-  Object.assign(settings.antiSpam, SPAM_PRESETS[ctx.match[1]]);
+  Object.assign(settings.antiSpam, SPAM_PRESETS[level]);
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  await ctx.answerCbQuery();
+  await ctx.answerCbQuery(`Anti-spam set to ${level}`);
   await renderGroupPanel(ctx, 'antispam');
 }));
 
+// ---------------------------------------------------------------------
+// GROUP ONBOARDING — fires automatically when the bot is added to a group
+// ---------------------------------------------------------------------
 bot.on('my_chat_member', async (ctx) => {
   const update = ctx.myChatMember;
   const wasOut = ['left', 'kicked'].includes(update.old_chat_member.status);
@@ -757,8 +785,12 @@ bot.action('onboard:auto_on', adminAction(async (ctx) => {
   settings.autoEvents.enabled = true;
   if (!settings.primaryChatId) settings.primaryChatId = ctx.chat.id;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  await ctx.answerCbQuery();
-  await ctx.editMessageText(`✅ Auto-Events are ON — dropping a Riddle, Fast Typing, or Trial every ${settings.autoEvents.intervalMinutes} minutes.\n\nAdjust anytime with /settings.`);
+  await ctx.answerCbQuery('Auto-Events enabled — hourly.');
+  try {
+    await ctx.editMessageText(`✅ Auto-Events are ON — dropping a Riddle, Fast Typing, or Trial every ${settings.autoEvents.intervalMinutes} minutes.\n\nAdjust anytime with /settings.`);
+  } catch (err) {
+    if (!/message is not modified/i.test(err.description || '')) throw err;
+  }
 }));
 
 bot.action('onboard:digest_setchat', adminAction(async (ctx) => {
@@ -766,8 +798,12 @@ bot.action('onboard:digest_setchat', adminAction(async (ctx) => {
   settings.primaryChatId = ctx.chat.id;
   settings.weeklyDigest.enabled = true;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  await ctx.answerCbQuery();
-  await ctx.editMessageText('✅ Weekly Digest is ON for this chat — the leaderboard + Mystery Box winner post here once a week.\n\nAdjust anytime with /settings.');
+  await ctx.answerCbQuery('Weekly Digest enabled here.');
+  try {
+    await ctx.editMessageText('✅ Weekly Digest is ON for this chat — the leaderboard + Mystery Box winner post here once a week.\n\nAdjust anytime with /settings.');
+  } catch (err) {
+    if (!/message is not modified/i.test(err.description || '')) throw err;
+  }
 }));
 
 bot.action('onboard:try_riddle', adminAction(async (ctx) => {
@@ -776,53 +812,18 @@ bot.action('onboard:try_riddle', adminAction(async (ctx) => {
   if (!game) return ctx.reply("A Keeper's Riddle is already active here.");
   const r = game.riddle;
   let msg = `🟣 KEEPER'S RIDDLE — CHAPTER ${r.chapter}\n\n${r.question}`;
-  if (r.options) msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
-  const sent = await ctx.reply(`${msg}\n\nAnswer in the chat — first correct gets a bonus.`);
-  keepersRiddle.setMessageId(ctx.chat.id, sent.message_id);
+  if (r.options) {
+    msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
+  }
+  msg += '\n\nAnswer in the chat — first correct gets a bonus.';
+  const sent = await ctx.reply(msg);
+  if (sent && sent.message_id) keepersRiddle.setMessageId(ctx.chat.id, sent.message_id);
 }));
 
-bot.command('help', (ctx) => {
-  ctx.reply([
-    '🫧 PLOMP CHRONICLES BOT',
-    '',
-    'PLAYER COMMANDS',
-    '/profile — view your Plomper profile',
-    '/leaderboard chronicles|community — this season\'s top 10',
-    '/lifetimeboard chronicles|community — all-time top 10',
-    '/setfaction <Green Order|Black Tide|Ashborn|Keepers> — pledge your faction',
-    '',
-    'ADMIN COMMANDS',
-    '/fasttyping — start a Fast Typing challenge',
-    '/riddle [chapter] — start a Keeper\'s Riddle (e.g. /riddle III)',
-    '/trial — start an Ashborn Trial (chained rapid-fire questions)',
-    '/setchat — register this chat for the weekly auto-digest AND auto-events',
-    '/digest — manually post the weekly leaderboard + Mystery Box digest now (for testing)',
-    '/autoevents on|off — turn automatic riddle/fast-typing/trial drops on or off',
-    '/setinterval <minutes> — how often auto-events drop (e.g. 60 = hourly, like ChatFight)',
-    '/addxp <chronicles|community> <amount> — reply to a user to award XP',
-    '/setxp <key> <value> — adjust an XP value',
-    '/resetseason — archive current season, start a new one',
-    '/export chronicles|community — download season leaderboard as CSV',
-    '',
-    'Note: a Hidden Clue ("Secret Question") occasionally appears on its own — no command needed, it\'s a rare surprise for whoever is in chat.'
-  ].join('\n'));
-});
+bot.command('help', (ctx) => sendHelpText(ctx));
 
-bot.catch((err) => {
-  console.error(`[bot] Update handling failed: ${err.message}`);
-});
-
-const launchPromise = bot.launch();
-launchPromise
-  .then(() => console.log('🫧 Plomp Chronicles bot stopped.'))
-  .catch((err) => {
-    console.error(`[bot] Telegram polling stopped: ${err.message}`);
-    process.exitCode = 1;
-  });
-
-bot.telegram.setMyCommands(BOT_COMMANDS)
-  .then(() => console.log('Telegram command menu registered.'))
-  .catch((err) => console.error('Could not register Telegram command menu:', err.message));
+bot.launch();
+console.log('🫧 Plomp Chronicles bot is online.');
 startScheduler(bot);
 startAutoEvents(bot);
 
