@@ -76,7 +76,7 @@ function triggerRandomEvent(bot, chatId, types) {
     const game = keepersRiddle.startRiddle(chatId);
     if (!game) return null;
     const r = game.riddle;
-    let msg = `🟣 KEEPER'S RIDDLE — CHAPTER ${r.chapter}\n\n${r.question}`;
+    let msg = `🟣 KEEPER'S RIDDLE CHAPTER ${r.chapter}\n\n${r.question}`;
     if (r.options) {
       msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
     }

@@ -87,12 +87,12 @@ function rewardsText() {
     '',
     'Rewards scale with how big the moment is:',
     '',
-    '🟢 In-the-moment wins (Fast Typing, riddles, trials, Tic-Tac-Toe, Connect Four) — straightforward XP.',
-    '🟣 Secret Questions — first correct answer wins a Mystery Reward (SOL, USDC, or $PMP).',
-    '🏆 Weekly Mystery Box — the #1 Chronicles player each week gets a Mystery Box (token, role, or NFT).',
-    '🥇 Season-end — top 3 get an NFT + token bundle, top 10 get tokens + a seasonal role.',
+    '🟢 In-the-moment wins (Fast Typing, riddles, trials, Tic-Tac-Toe, Connect Four), straightforward XP.',
+    '🟣 Secret Questions, first correct answer wins a Mystery Reward (SOL, USDC, or $PMP).',
+    '🏆 Weekly Mystery Box, the #1 Chronicles player each week gets a Mystery Box (token, role, or NFT).',
+    '🥇 Season-end, top 3 get an NFT + token bundle, top 10 get tokens + a seasonal role.',
     '',
-    'Rewards are sent out by hand, using the wallet you register below — the bot never touches funds.'
+    'Rewards are sent out by hand, using the wallet you register below, the bot never touches funds.'
   ].join('\n');
 }
 
@@ -107,7 +107,7 @@ function rewardsKeyboard() {
 // WALLET SCREENS
 // ---------------------------------------------------------------------
 function walletGroupText() {
-  return '🫧 Manage your wallet privately — tap below to open a DM with me.';
+  return '🫧 Manage your wallet privately, tap below to open a DM with me.';
 }
 
 function walletGroupKeyboard(botUsername) {
@@ -122,7 +122,7 @@ function walletEmptyText() {
     '',
     'No wallet registered yet.',
     '',
-    'Register your Solana address so we know where to send rewards. This is just an address — never share your seed phrase or private key, and we will never ask for one.'
+    'Register your Solana address so we know where to send rewards. This is just an address, never share your seed phrase or private key, and we will never ask for one.'
   ].join('\n');
 }
 
@@ -284,7 +284,7 @@ function antiSpamText(settings) {
     `Cooldown: ${settings.antiSpam.cooldownSeconds}s between XP-earning messages`,
     `Daily XP cap: ${settings.antiSpam.dailyXpCap}`,
     '',
-    'Pick a preset — this adjusts cooldown, minimum message quality, and the daily cap together.'
+    'Pick a preset: this adjusts cooldown, minimum message quality, and the daily cap together.'
   ].join('\n');
 }
 
@@ -344,14 +344,14 @@ function resetConfirmKeyboard() {
 // ---------------------------------------------------------------------
 function onboardingText() {
   return [
-    "👋 Welcome — I'm now live in your group.",
+    "👋 Welcome, I'm now live in your group.",
     '',
     '3 quick wins to set up:',
-    '1. Auto-Events — drops a Riddle, Fast Typing, or Trial on a timer so the chat stays active.',
-    '2. Weekly Digest — posts the leaderboard + Mystery Box winner here, once a week, automatically.',
-    "3. Keeper's Riddle — start one right now and see how it works.",
+    '1. Auto-Events: drops a Riddle, Fast Typing, or Trial on a timer so the chat stays active.',
+    '2. Weekly Digest: posts the leaderboard + Mystery Box winner here, once a week, automatically.',
+    "3. Keeper's Riddle: start one right now and see how it works.",
     '',
-    'Tap a button below — these all apply to this group. Only admins can change them.'
+    'Tap a button below, these all apply to this group. Only admins can change them.'
   ].join('\n');
 }
 

@@ -101,12 +101,12 @@ bot.on('text', async (ctx, next) => {
   if (keepersRiddle.isRiddleActive(chatId)) {
     const result = keepersRiddle.checkAnswer(chatId, userId, meta, text);
     if (result && result.correct) {
-      const tag = result.isFirst ? "🟢 FIRST CORRECT — bonus applied!" : '🟢 CORRECT';
+      const tag = result.isFirst ? "🟢 FIRST CORRECT bonus applied!" : '🟢 CORRECT';
       await ctx.reply(`${tag}\n${displayName(meta)} solved the Keeper's Riddle.\n+${result.xp} XP (Chronicles)`);
       return;
     }
     if (result && result.correct === false) {
-      await ctx.reply(`❌ Not quite, ${displayName(meta)} — that was your one shot on this riddle!`);
+      await ctx.reply(`❌ Not quite, ${displayName(meta)}  that was your one shot on this riddle!`);
       return;
     }
   }
@@ -119,7 +119,7 @@ bot.on('text', async (ctx, next) => {
       return;
     }
     if (result && result.correct === false) {
-      await ctx.reply(`❌ Not quite, ${displayName(meta)} — that was your one shot on this round!`);
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} that was your one shot on this round!`);
       return;
     }
   }
@@ -131,7 +131,7 @@ bot.on('text', async (ctx, next) => {
       return;
     }
     if (result && result.correct === false) {
-      await ctx.reply(`❌ Not quite, ${displayName(meta)} — that was your one shot on this one!`);
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} that was your one shot on this one!`);
       return;
     }
   }
@@ -167,7 +167,7 @@ bot.command('profile', (ctx) => {
 bot.command('leaderboard', (ctx) => {
   const arg = (ctx.message.text.split(' ')[1] || 'chronicles').toLowerCase();
   const category = arg.startsWith('comm') ? 'community' : 'chronicles';
-  const title = category === 'chronicles' ? '🧠 CHRONICLES LEADERBOARD — SEASON' : '💬 COMMUNITY ACTIVITY LEADERBOARD — SEASON';
+  const title = category === 'chronicles' ? '🧠 CHRONICLES LEADERBOARD — SEASON' : '💬 COMMUNITY ACTIVITY LEADERBOARD SEASON';
   const rows = buildLeaderboard(category, 'season', 10);
   ctx.reply(formatLeaderboard(rows, title));
 });
@@ -175,7 +175,7 @@ bot.command('leaderboard', (ctx) => {
 bot.command('lifetimeboard', (ctx) => {
   const arg = (ctx.message.text.split(' ')[1] || 'chronicles').toLowerCase();
   const category = arg.startsWith('comm') ? 'community' : 'chronicles';
-  const title = category === 'chronicles' ? '🧠 CHRONICLES — LIFETIME' : '💬 COMMUNITY — LIFETIME';
+  const title = category === 'chronicles' ? '🧠 CHRONICLES LIFETIME' : '💬 COMMUNITY LIFETIME';
   const rows = buildLeaderboard(category, 'lifetime', 10);
   ctx.reply(formatLeaderboard(rows, title));
 });
@@ -200,7 +200,7 @@ bot.command('fasttyping', (ctx) => {
   const settings = loadSettings();
   const game = fastTyping.startGame(ctx.chat.id);
   if (!game) return ctx.reply('A Fast Typing challenge is already running here.');
-  ctx.reply(`⚡ PLOMP RUSH — FAST TYPING\n\nType this EXACTLY, first correct wins:\n\n"${game.phrase}"\n\n⏱ ${settings.fastTyping.timeLimitSeconds}s`);
+  ctx.reply(`⚡ PLOMP RUSH FAST TYPING\n\nType this EXACTLY, first correct wins:\n\n"${game.phrase}"\n\n⏱ ${settings.fastTyping.timeLimitSeconds}s`);
 });
 
 bot.command('trial', (ctx) => {
@@ -217,7 +217,7 @@ bot.command('riddle', async (ctx) => {
   if (!game) return ctx.reply("A Keeper's Riddle is already active here.");
 
   const r = game.riddle;
-  let msg = `🟣 KEEPER'S RIDDLE — CHAPTER ${r.chapter}\n\n${r.question}`;
+  let msg = `🟣 KEEPER'S RIDDLE CHAPTER ${r.chapter}\n\n${r.question}`;
   if (r.options) {
     msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
   }
@@ -305,8 +305,8 @@ bot.command('autoevents', (ctx) => {
   if (arg === 'on') {
     settings.autoEvents.enabled = true;
     fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-    const chatNote = settings.primaryChatId ? '' : '\n\n⚠️ No chat registered yet — run /setchat here first, or auto-drops have nowhere to go.';
-    return ctx.reply(`✅ Auto-events ON — dropping every ${settings.autoEvents.intervalMinutes} minutes.${chatNote}`);
+    const chatNote = settings.primaryChatId ? '' : '\n\n⚠️ No chat registered yet run /setchat here first, or auto-drops have nowhere to go.';
+    return ctx.reply(`✅ Auto-events ON dropping every ${settings.autoEvents.intervalMinutes} minutes.${chatNote}`);
   }
   if (arg === 'off') {
     settings.autoEvents.enabled = false;
@@ -382,13 +382,13 @@ bot.action('pmenu:rankings', async (ctx) => {
 bot.action('pmenu:rankings:chronicles', async (ctx) => {
   await ctx.answerCbQuery();
   const rows = buildLeaderboard('chronicles', 'season', 10);
-  await safeEdit(ctx, formatLeaderboard(rows, '🧠 CHRONICLES — SEASON'), ui.rankingsKeyboard());
+  await safeEdit(ctx, formatLeaderboard(rows, '🧠 CHRONICLES SEASON'), ui.rankingsKeyboard());
 });
 
 bot.action('pmenu:rankings:community', async (ctx) => {
   await ctx.answerCbQuery();
   const rows = buildLeaderboard('community', 'season', 10);
-  await safeEdit(ctx, formatLeaderboard(rows, '💬 COMMUNITY — SEASON'), ui.rankingsKeyboard());
+  await safeEdit(ctx, formatLeaderboard(rows, '💬 COMMUNITY SEASON'), ui.rankingsKeyboard());
 });
 
 bot.action('pmenu:games', async (ctx) => {
@@ -407,7 +407,7 @@ bot.action('pmenu:games:tictactoe', async (ctx) => {
 bot.action('pmenu:games:connectfour', async (ctx) => {
   await ctx.answerCbQuery();
   if (ctx.chat.type === 'private') {
-    return ctx.reply('Connect Four is a group game — open it in your community chat instead.');
+    return ctx.reply('Connect Four is a group game open it in your community chat instead.');
   }
   await startConnectFourInChat(ctx);
 });
@@ -514,7 +514,7 @@ bot.action(/^ttt:join:(.+)$/, async (ctx) => {
     };
     return ctx.answerCbQuery(messages[result.reason] || "Can't join right now.", { show_alert: true });
   }
-  await ctx.answerCbQuery(result.started ? 'Game on!' : 'Joined — waiting for an opponent.');
+  await ctx.answerCbQuery(result.started ? 'Game on!' : 'Joined waiting for an opponent.');
   await safeEdit(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
 });
 
@@ -567,7 +567,7 @@ bot.action(/^c4:join:(.+)$/, async (ctx) => {
     };
     return ctx.answerCbQuery(messages[result.reason] || "Can't join right now.", { show_alert: true });
   }
-  await ctx.answerCbQuery(result.started ? 'Game on!' : 'Joined — waiting for an opponent.');
+  await ctx.answerCbQuery(result.started ? 'Game on!' : 'Joined waiting for an opponent.');
   await safeEdit(ctx, result.rendered.text, { reply_markup: result.rendered.keyboard });
 });
 
@@ -579,8 +579,8 @@ bot.action(/^c4:move:(.+):(\d+)$/, async (ctx) => {
     const messages = {
       outsider: "You're not in this game.",
       'not-your-turn': "It's not your turn.",
-      full: 'That column is full — try another.',
-      'not-active': 'This game has ended.',
+      full: 'That column is full, try another.',
+      'not active': 'This game has ended.',
       'invalid-session': 'This game no longer exists.'
     };
     return ctx.answerCbQuery(messages[result.reason] || "Can't do that.", { show_alert: true });
@@ -591,14 +591,14 @@ bot.action(/^c4:move:(.+):(\d+)$/, async (ctx) => {
 
 async function sendHelpText(ctx) {
   await ctx.reply([
-    '🫧 PLOMP CHRONICLES BOT',
+    'PLOMP CHRONICLES BOT',
     '',
     'PLAYER COMMANDS',
     '/menu — open the button menu (Rankings, Games, Profile, Wallet, Rewards, Help)',
     '/profile — view your Plomper profile',
-    '/leaderboard chronicles|community — this season\'s top 10',
-    '/lifetimeboard chronicles|community — all-time top 10',
-    '/setfaction <Green Order|Black Tide|Ashborn|Keepers> — pledge your faction',
+    '/leaderboard chronicles|community, this season\'s top 10',
+    '/lifetimeboard chronicles|community all-time top 10',
+    '/setfaction <Green Order|Black Tide|Ashborn|Keepers> pledge your faction',
     '/wallet — register the Solana address rewards get sent to',
     '/tictactoe — start a Tic-Tac-Toe challenge in this chat',
     '/connect4 — start a Connect Four challenge in this chat',
@@ -618,7 +618,7 @@ async function sendHelpText(ctx) {
     '/resetseason — archive current season, start a new one',
     '/export chronicles|community — download season leaderboard as CSV',
     '',
-    'Note: a Hidden Clue ("Secret Question") occasionally appears on its own — no command needed, it\'s a rare surprise for whoever is in chat. Everyone gets one answer per question, right or wrong — the bot always replies to your first attempt.'
+    'Note: a Hidden Clue ("Secret Question") occasionally appears on its own — no command needed, it\'s a rare surprise for whoever is in chat. Everyone gets one answer per question, right or wrong, the bot always replies to your first attempt.'
   ].join('\n'));
 }
 
@@ -804,9 +804,9 @@ bot.action('onboard:auto_on', adminAction(async (ctx) => {
   settings.autoEvents.enabled = true;
   if (!settings.primaryChatId) settings.primaryChatId = ctx.chat.id;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-  await ctx.answerCbQuery('Auto-Events enabled — hourly.');
+  await ctx.answerCbQuery('Auto-Events enabled, hourly.');
   try {
-    await ctx.editMessageText(`✅ Auto-Events are ON — dropping a Riddle, Fast Typing, or Trial every ${settings.autoEvents.intervalMinutes} minutes.\n\nAdjust anytime with /settings.`);
+    await ctx.editMessageText(`✅ Auto-Events are ON, dropping a Riddle, Fast Typing, or Trial every ${settings.autoEvents.intervalMinutes} minutes.\n\nAdjust anytime with /settings.`);
   } catch (err) {
     if (!/message is not modified/i.test(err.description || '')) throw err;
   }
@@ -830,18 +830,18 @@ bot.action('onboard:try_riddle', adminAction(async (ctx) => {
   const game = keepersRiddle.startRiddle(ctx.chat.id);
   if (!game) return ctx.reply("A Keeper's Riddle is already active here.");
   const r = game.riddle;
-  let msg = `🟣 KEEPER'S RIDDLE — CHAPTER ${r.chapter}\n\n${r.question}`;
+  let msg = `🟣 KEEPER'S RIDDLE CHAPTER ${r.chapter}\n\n${r.question}`;
   if (r.options) {
     msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
   }
-  msg += '\n\nOne answer per person — first correct gets a bonus.';
+  msg += '\n\nOne answer per person, first correct gets a bonus.';
   await ctx.reply(msg);
 }));
 
 bot.command('help', (ctx) => sendHelpText(ctx));
 
 bot.launch();
-console.log('🫧 Plomp Chronicles bot is online.');
+console.log('Plomp Chronicles bot is online.');
 startScheduler(bot);
 startAutoEvents(bot);
 

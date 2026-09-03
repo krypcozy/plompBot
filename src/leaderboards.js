@@ -21,8 +21,8 @@ function formatLeaderboard(rows, title) {
   if (rows.length === 0) return `${title}\n\nNo Plompers on the board yet.`;
   const medals = ['🥇', '🥈', '🥉'];
   const lines = rows.map((r, i) => {
-    const rank = medals[i] || `#${i + 1}`;
-    return `${rank} ${r.name} — ${r.xp} XP`;
+    const rank = medals[i] || `${i + 1}`;
+    return `${rank} ${r.name} ${r.xp} XP`;
   });
   return `${title}\n\n${lines.join('\n')}`;
 }
