@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { matchesAnswer } = require('../src/answerMatch');
+const { matchesAnswer } = require('../answerMatch');
 
 const cases = [
   ['The Core Chooses Only the Worthy', { answer: 'The Core Chooses Only the Worthy', type: 'text' }, true],

@@ -36,13 +36,6 @@ if (!BOT_TOKEN) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// ---------------------------------------------------------------------
-// GLOBAL ERROR HANDLER — critical: without this, Telegraf's default
-// behavior is to re-throw unhandled errors, which crashes the entire
-// Node process on ANY single bad interaction (missing file, bad input,
-// a Telegram API hiccup, anything). This catches everything at the top
-// level so one broken command/message can never take the whole bot down.
-// ---------------------------------------------------------------------
 bot.catch((err, ctx) => {
   console.error(`[bot] Unhandled error for update type "${ctx.updateType}" in chat ${ctx.chat ? ctx.chat.id : 'unknown'}:`, err);
 });
@@ -73,7 +66,6 @@ bot.on('text', async (ctx, next) => {
   const userId = ctx.from.id;
   const chatId = ctx.chat.id;
   const meta = userMeta(ctx);
-  const replyToMessageId = ctx.message.reply_to_message ? ctx.message.reply_to_message.message_id : null;
 
   if (wallet.isPendingWalletInput(userId)) {
     const canonical = wallet.normalizeSolanaAddress(text);
@@ -99,40 +91,47 @@ bot.on('text', async (ctx, next) => {
     }
   }
 
+  // Each of the three riddle-based games now enforces ONE attempt per
+  // person per question at the engine level: checkAnswer() returns null
+  // (no response at all) if this user already used their attempt on the
+  // current question, and always returns a real {correct: true/false}
+  // result on their first-ever message while it's active — so every
+  // genuine first attempt gets a response, right or wrong, with no
+  // reliance on the person using Telegram's "reply" feature.
   if (keepersRiddle.isRiddleActive(chatId)) {
-    const result = keepersRiddle.checkAnswer(chatId, userId, meta, text, replyToMessageId);
+    const result = keepersRiddle.checkAnswer(chatId, userId, meta, text);
     if (result && result.correct) {
       const tag = result.isFirst ? "🟢 FIRST CORRECT — bonus applied!" : '🟢 CORRECT';
       await ctx.reply(`${tag}\n${displayName(meta)} solved the Keeper's Riddle.\n+${result.xp} XP (Chronicles)`);
       return;
     }
-    if (result && result.correct === false && result.isReplyAttempt) {
-      await ctx.reply(`❌ Not quite, ${displayName(meta)} — try again!`);
+    if (result && result.correct === false) {
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} — that was your one shot on this riddle!`);
       return;
     }
   }
 
   if (ashbornTrial.isTrialActive(chatId)) {
-    const result = ashbornTrial.checkAnswer(chatId, userId, meta, text, replyToMessageId);
+    const result = ashbornTrial.checkAnswer(chatId, userId, meta, text);
     if (result && result.correct) {
       const tag = result.isFirst ? '🟠 FIRST CORRECT' : '🟠 CORRECT';
       await ctx.reply(`${tag} — ${displayName(meta)} +${result.xp} XP`);
       return;
     }
-    if (result && result.correct === false && result.isReplyAttempt) {
-      await ctx.reply(`❌ Not quite, ${displayName(meta)} — try again!`);
+    if (result && result.correct === false) {
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} — that was your one shot on this round!`);
       return;
     }
   }
 
   if (hiddenClue.isActive(chatId)) {
-    const result = hiddenClue.checkAnswer(chatId, userId, meta, text, replyToMessageId);
+    const result = hiddenClue.checkAnswer(chatId, userId, meta, text);
     if (result && result.correct) {
       await ctx.reply(`🟢 CORRECT\n${displayName(meta)} has solved the Keeper's riddle.\n\n🎁 Mystery Reward unlocked.\n+${result.xp} XP (Chronicles)\n\nThe Chronicles continue...`);
       return;
     }
-    if (result && result.correct === false && result.isReplyAttempt) {
-      await ctx.reply(`❌ Not quite, ${displayName(meta)} — try again!`);
+    if (result && result.correct === false) {
+      await ctx.reply(`❌ Not quite, ${displayName(meta)} — that was your one shot on this one!`);
       return;
     }
   }
@@ -153,9 +152,8 @@ bot.on('text', async (ctx, next) => {
     if (dropped.options) {
       clueMsg += `\n\n${dropped.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
     }
-    clueMsg += `\n\nFirst person to answer correctly receives a Mystery Reward.`;
-    const sent = await ctx.reply(clueMsg);
-    if (sent && sent.message_id) hiddenClue.setMessageId(chatId, sent.message_id);
+    clueMsg += `\n\nOne answer per person. First correct wins the Mystery Reward.`;
+    await ctx.reply(clueMsg);
   }
 });
 
@@ -223,9 +221,8 @@ bot.command('riddle', async (ctx) => {
   if (r.options) {
     msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
   }
-  msg += `\n\nAnswer in the chat (reply to this message to get "wrong" feedback). First correct gets a bonus.`;
-  const sent = await ctx.reply(msg);
-  if (sent && sent.message_id) keepersRiddle.setMessageId(ctx.chat.id, sent.message_id);
+  msg += `\n\nOne answer per person. First correct gets a bonus.`;
+  await ctx.reply(msg);
 });
 
 // ---------------------------------------------------------------------
@@ -331,6 +328,18 @@ bot.command('setinterval', (ctx) => {
   settings.autoEvents.intervalMinutes = minutes;
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
   ctx.reply(`⏱ Auto-events will now drop every ${minutes} minutes (once enabled with /autoevents on).`);
+});
+
+bot.command('setminute', (ctx) => {
+  if (!isAdmin(ctx.from.id)) return ctx.reply('Only the council (admins) can do this. Check that your Telegram ID is correctly listed in adminIds in config/settings.json.');
+  const minute = parseInt(ctx.message.text.split(' ')[1], 10);
+  if (isNaN(minute) || minute < 0 || minute > 59) {
+    return ctx.reply('Usage: /setminute <0-59>\nSets which minute past the hour auto-events land on (UTC).\nExample: /setminute 10 — drops at :10 past every hour.');
+  }
+  const settings = loadSettings();
+  settings.autoEvents.targetMinute = minute;
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  ctx.reply(`⏱ Auto-events will now land at :${String(minute).padStart(2, '0')} past the hour (UTC), on the interval already set with /setinterval.`);
 });
 
 bot.start(async (ctx) => {
@@ -603,12 +612,13 @@ async function sendHelpText(ctx) {
     '/digest — manually post the weekly leaderboard + Mystery Box digest now (for testing)',
     '/autoevents on|off — turn automatic riddle/fast-typing/trial drops on or off',
     '/setinterval <minutes> — how often auto-events drop (e.g. 60 = hourly, like ChatFight)',
+    '/setminute <0-59> — which minute past the hour auto-events land on, e.g. /setminute 10',
     '/addxp <chronicles|community> <amount> — reply to a user to award XP',
     '/setxp <key> <value> — adjust an XP value',
     '/resetseason — archive current season, start a new one',
     '/export chronicles|community — download season leaderboard as CSV',
     '',
-    'Note: a Hidden Clue ("Secret Question") occasionally appears on its own — no command needed, it\'s a rare surprise for whoever is in chat. Reply directly to any active riddle/trial question and a wrong guess will let you know so you can try again.'
+    'Note: a Hidden Clue ("Secret Question") occasionally appears on its own — no command needed, it\'s a rare surprise for whoever is in chat. Everyone gets one answer per question, right or wrong — the bot always replies to your first attempt.'
   ].join('\n'));
 }
 
@@ -719,6 +729,15 @@ bot.action(/^auto:interval:(\d+)$/, adminAction(async (ctx) => {
   await renderGroupPanel(ctx, 'autoevents');
 }));
 
+bot.action(/^auto:minute:(\d+)$/, adminAction(async (ctx) => {
+  const minute = parseInt(ctx.match[1], 10);
+  const settings = loadSettings();
+  settings.autoEvents.targetMinute = minute;
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  await ctx.answerCbQuery(`Now landing at :${String(minute).padStart(2, '0')} past the hour`);
+  await renderGroupPanel(ctx, 'autoevents');
+}));
+
 bot.action(/^auto:type:(riddle|fasttyping|trial)$/, adminAction(async (ctx) => {
   const type = ctx.match[1];
   const settings = loadSettings();
@@ -815,9 +834,8 @@ bot.action('onboard:try_riddle', adminAction(async (ctx) => {
   if (r.options) {
     msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
   }
-  msg += '\n\nAnswer in the chat — first correct gets a bonus.';
-  const sent = await ctx.reply(msg);
-  if (sent && sent.message_id) keepersRiddle.setMessageId(ctx.chat.id, sent.message_id);
+  msg += '\n\nOne answer per person — first correct gets a bonus.';
+  await ctx.reply(msg);
 }));
 
 bot.command('help', (ctx) => sendHelpText(ctx));

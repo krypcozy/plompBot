@@ -10,7 +10,7 @@ function loadRiddleBank() {
   return JSON.parse(fs.readFileSync(RIDDLE_BANK_PATH, 'utf8'));
 }
 
-const activeRiddles = new Map(); // chatId -> { riddle, startedAt, solvedUsers, firstSolved, timer }
+const activeRiddles = new Map(); // chatId -> { riddle, solvedUsers, attemptedUsers, firstSolved, timer }
 
 function pickRiddle(bank, chapter) {
   let pool = bank.riddles;
@@ -25,7 +25,14 @@ function startRiddle(chatId, chapter = null) {
   if (activeRiddles.has(chatId)) return null;
   const bank = loadRiddleBank();
   const riddle = pickRiddle(bank, chapter);
-  const game = { riddle, startedAt: Date.now(), attemptedUsers: new Set(), solvedUsers: new Set(), firstSolved: false, bankSettings: bank.settings, messageId: null };
+  const game = {
+    riddle,
+    startedAt: Date.now(),
+    solvedUsers: new Set(),
+    attemptedUsers: new Set(),
+    firstSolved: false,
+    bankSettings: bank.settings
+  };
 
   game.timer = setTimeout(() => {
     activeRiddles.delete(chatId);
@@ -35,30 +42,32 @@ function startRiddle(chatId, chapter = null) {
   return game;
 }
 
-function setMessageId(chatId, messageId) {
-  const game = activeRiddles.get(chatId);
-  if (game) game.messageId = messageId;
-}
-
-function checkAnswer(chatId, userId, meta, text, replyToMessageId = null) {
+/**
+ * One attempt per person per riddle — right or wrong. First message a
+ * user sends while this riddle is active is their one shot: it always
+ * gets a response (correct or wrong). Any further messages from that
+ * same user while this riddle is still active are silently ignored
+ * (returns null), so chit-chat afterward never gets flagged as a
+ * second "wrong answer."
+ */
+function checkAnswer(chatId, userId, meta, text) {
   const game = activeRiddles.get(chatId);
   if (!game) return null;
-  const userKey = String(userId);
-  if (game.attemptedUsers.has(userKey)) return { alreadyAttempted: true };
 
-  game.attemptedUsers.add(userKey);
+  const uid = String(userId);
+  if (game.attemptedUsers.has(uid)) return null;
+  game.attemptedUsers.add(uid);
+
   const correct = matchesAnswer(text, game.riddle);
-  const isReplyAttempt = game.messageId != null && replyToMessageId === game.messageId;
-
   const user = getUser(userId, meta);
   user.questionsAnswered += 1;
 
   if (!correct) {
     saveUsers();
-    return { correct: false, isReplyAttempt };
+    return { correct: false };
   }
 
-  game.solvedUsers.add(String(userId));
+  game.solvedUsers.add(uid);
   user.correctAnswers += 1;
   user.riddlesSolved += 1;
 
@@ -80,4 +89,4 @@ function isRiddleActive(chatId) {
   return activeRiddles.has(chatId);
 }
 
-module.exports = { startRiddle, checkAnswer, isRiddleActive, loadRiddleBank, setMessageId };
+module.exports = { startRiddle, checkAnswer, isRiddleActive, loadRiddleBank };

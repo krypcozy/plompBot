@@ -16,19 +16,25 @@ function mainMenuText() {
 
 function mainMenuKeyboard(botUsername, opts = {}) {
   const inGroup = !!opts.inGroup;
-  const deepLink = (payload) => botUsername ? `https://t.me/${botUsername}?start=${payload}` : null;
+  const deepLink = (payload) => (botUsername ? `https://t.me/${botUsername}?start=${payload}` : null);
+
   const walletButton = inGroup && deepLink('wallet')
     ? Markup.button.url('👛 Wallet', deepLink('wallet'))
     : Markup.button.callback('👛 Wallet', 'pmenu:wallet');
+
   const rewardsButton = inGroup && deepLink('rewards')
     ? Markup.button.url('🎁 Rewards', deepLink('rewards'))
     : Markup.button.callback('🎁 Rewards', 'pmenu:rewards');
+
   const rows = [
     [Markup.button.callback('🏆 Rankings', 'pmenu:rankings'), Markup.button.callback('🎮 Games', 'pmenu:games')],
     [Markup.button.callback('👤 My Profile', 'pmenu:profile'), walletButton],
     [rewardsButton, Markup.button.callback('ℹ️ Help', 'pmenu:help')]
   ];
-  if (!inGroup && botUsername) rows.push([Markup.button.url('➕ Add me in a group', `https://t.me/${botUsername}?startgroup=true`)]);
+  if (!inGroup) {
+    const addUrl = botUsername ? `https://t.me/${botUsername}?startgroup=true` : null;
+    if (addUrl) rows.push([Markup.button.url('➕ Add me in a group', addUrl)]);
+  }
   return Markup.inlineKeyboard(rows);
 }
 
@@ -36,6 +42,9 @@ function backToMainKeyboard() {
   return Markup.inlineKeyboard([[Markup.button.callback('⬅️ Back', 'pmenu:main')]]);
 }
 
+// ---------------------------------------------------------------------
+// RANKINGS SUBMENU
+// ---------------------------------------------------------------------
 function rankingsText() {
   return '🏆 RANKINGS\n\nCheck community progress and this season\'s standings.';
 }
@@ -47,11 +56,18 @@ function rankingsKeyboard() {
   ]);
 }
 
+// ---------------------------------------------------------------------
+// GAMES SUBMENU
+// ---------------------------------------------------------------------
 function gamesMenuText() {
   return [
-    '🎮 GAMES', '', 'Play, compete, and challenge the community.', '',
+    '🎮 GAMES',
+    '',
+    'Play, compete, and challenge the community.',
+    '',
     '🟣 Keeper\'s Riddle, ⚡ Fast Typing, and 🟠 Ashborn Trial run in your group chat — an admin starts these with /riddle, /fasttyping, or /trial.',
-    '', '❌⭕ Tic-Tac-Toe and 🟡 Connect Four you can start yourself, right here in the group.'
+    '',
+    '❌⭕ Tic-Tac-Toe and 🟡 Connect Four you can start yourself, right here in the group.'
   ].join('\n');
 }
 
@@ -62,13 +78,20 @@ function gamesMenuKeyboard() {
   ]);
 }
 
+// ---------------------------------------------------------------------
+// REWARDS SUBMENU (informational)
+// ---------------------------------------------------------------------
 function rewardsText() {
   return [
-    '🎁 REWARDS', '', 'Rewards scale with how big the moment is:', '',
+    '🎁 REWARDS',
+    '',
+    'Rewards scale with how big the moment is:',
+    '',
     '🟢 In-the-moment wins (Fast Typing, riddles, trials, Tic-Tac-Toe, Connect Four) — straightforward XP.',
     '🟣 Secret Questions — first correct answer wins a Mystery Reward (SOL, USDC, or $PMP).',
     '🏆 Weekly Mystery Box — the #1 Chronicles player each week gets a Mystery Box (token, role, or NFT).',
-    '🥇 Season-end — top 3 get an NFT + token bundle, top 10 get tokens + a seasonal role.', '',
+    '🥇 Season-end — top 3 get an NFT + token bundle, top 10 get tokens + a seasonal role.',
+    '',
     'Rewards are sent out by hand, using the wallet you register below — the bot never touches funds.'
   ].join('\n');
 }
@@ -80,30 +103,84 @@ function rewardsKeyboard() {
   ]);
 }
 
-function walletGroupText() { return '🫧 Manage your wallet privately — tap below to open a DM with me.'; }
+// ---------------------------------------------------------------------
+// WALLET SCREENS
+// ---------------------------------------------------------------------
+function walletGroupText() {
+  return '🫧 Manage your wallet privately — tap below to open a DM with me.';
+}
+
 function walletGroupKeyboard(botUsername) {
   const url = botUsername ? `https://t.me/${botUsername}?start=wallet` : null;
-  return url ? Markup.inlineKeyboard([[Markup.button.url('👛 Open Wallet', url)]]) : Markup.inlineKeyboard([[Markup.button.callback('👛 Open Wallet', 'pmenu:wallet')]]);
+  if (!url) return Markup.inlineKeyboard([[Markup.button.callback('👛 Open Wallet', 'pmenu:wallet')]]);
+  return Markup.inlineKeyboard([[Markup.button.url('👛 Open Wallet', url)]]);
 }
+
 function walletEmptyText() {
-  return ['👛 MY WALLET', '', 'No wallet registered yet.', '', 'Register your Solana address so we know where to send rewards. This is just an address — never share your seed phrase or private key, and we will never ask for one.'].join('\n');
+  return [
+    '👛 MY WALLET',
+    '',
+    'No wallet registered yet.',
+    '',
+    'Register your Solana address so we know where to send rewards. This is just an address — never share your seed phrase or private key, and we will never ask for one.'
+  ].join('\n');
 }
+
 function walletEmptyKeyboard() {
-  return Markup.inlineKeyboard([[Markup.button.callback('⌨️ Enter Wallet Address', 'wallet:enter')], [Markup.button.callback('⬅️ Back', 'pmenu:main')]]);
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('⌨️ Enter Wallet Address', 'wallet:enter')],
+    [Markup.button.callback('⬅️ Back', 'pmenu:main')]
+  ]);
 }
+
 function walletRegisteredText(record, shortAddress) {
-  return ['👛 MY WALLET', '', `Wallet: ${shortAddress}`, `Registered: ${new Date(record.registeredAt).toISOString().slice(0, 10)}`, '', 'Rewards get sent to this address.'].join('\n');
+  return [
+    '👛 MY WALLET',
+    '',
+    `Wallet: ${shortAddress}`,
+    `Registered: ${new Date(record.registeredAt).toISOString().slice(0, 10)}`,
+    '',
+    'Rewards get sent to this address.'
+  ].join('\n');
 }
+
 function walletRegisteredKeyboard() {
-  return Markup.inlineKeyboard([[Markup.button.callback('✏️ Change Wallet', 'wallet:change')], [Markup.button.callback('🗑 Remove Wallet', 'wallet:remove')], [Markup.button.callback('⬅️ Back', 'pmenu:main')]]);
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('✏️ Change Wallet', 'wallet:change')],
+    [Markup.button.callback('🗑 Remove Wallet', 'wallet:remove')],
+    [Markup.button.callback('⬅️ Back', 'pmenu:main')]
+  ]);
 }
-function walletEnterPromptText() { return ['Send your Solana wallet address as your next message.', '', '⚠️ Double-check it — rewards get sent here.', 'Never send a seed phrase or private key. We will never ask for one.'].join('\n'); }
-function walletEnterPromptKeyboard() { return Markup.inlineKeyboard([[Markup.button.callback('Cancel', 'wallet:cancel_input')]]); }
-function walletInvalidText() { return "❌ That doesn't look like a valid Solana address. Try again, or cancel."; }
-function walletTakenText() { return '⚠️ That wallet is already registered to another Plomper. Use a different address.'; }
-function walletRemoveConfirmText() { return 'Remove your registered wallet?'; }
+
+function walletEnterPromptText() {
+  return [
+    'Send your Solana wallet address as your next message.',
+    '',
+    '⚠️ Double-check it — rewards get sent here.',
+    'Never send a seed phrase or private key. We will never ask for one.'
+  ].join('\n');
+}
+
+function walletEnterPromptKeyboard() {
+  return Markup.inlineKeyboard([[Markup.button.callback('Cancel', 'wallet:cancel_input')]]);
+}
+
+function walletInvalidText() {
+  return "❌ That doesn't look like a valid Solana address. Try again, or cancel.";
+}
+
+function walletTakenText() {
+  return '⚠️ That wallet is already registered to another Plomper. Use a different address.';
+}
+
+function walletRemoveConfirmText() {
+  return 'Remove your registered wallet?';
+}
+
 function walletRemoveConfirmKeyboard() {
-  return Markup.inlineKeyboard([[Markup.button.callback('Yes, remove it', 'wallet:remove_confirm'), Markup.button.callback('Cancel', 'wallet:remove_cancel')]]);
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('Yes, remove it', 'wallet:remove_confirm'), Markup.button.callback('Cancel', 'wallet:remove_cancel')]
+  ]);
 }
 
 // ---------------------------------------------------------------------
@@ -131,15 +208,17 @@ function groupSettingsKeyboard() {
 }
 
 // ---------------------------------------------------------------------
-// AUTO-EVENTS PANEL
+// AUTO-EVENTS PANEL — now wall-clock aligned (fires at :MM past the
+// hour, not "N minutes after whenever the bot happened to start")
 // ---------------------------------------------------------------------
 function autoEventsText(settings) {
   const cfg = settings.autoEvents;
+  const targetMinute = cfg.targetMinute != null ? cfg.targetMinute : 10;
   const lines = [
     '⏱ AUTO-EVENTS',
     '',
     `Status: ${cfg.enabled ? '✅ ON' : '⛔ OFF'}`,
-    `Interval: every ${cfg.intervalMinutes} minutes`,
+    `Schedule: every ${cfg.intervalMinutes} min, at :${String(targetMinute).padStart(2, '0')} past the hour (UTC)`,
     `Active types: ${cfg.types.length ? cfg.types.join(', ') : 'none selected — pick at least one below'}`
   ];
   if (!settings.primaryChatId) lines.push('', '⚠️ No chat registered yet — set one from the Weekly Digest menu first.');
@@ -148,13 +227,20 @@ function autoEventsText(settings) {
 
 function autoEventsKeyboard(settings) {
   const cfg = settings.autoEvents;
-  const has = (type) => cfg.types.includes(type);
+  const targetMinute = cfg.targetMinute != null ? cfg.targetMinute : 10;
+  const has = (t) => cfg.types.includes(t);
   return Markup.inlineKeyboard([
     [Markup.button.callback(cfg.enabled ? '⛔ Turn OFF' : '✅ Turn ON', cfg.enabled ? 'auto:off' : 'auto:on')],
     [
       Markup.button.callback('30 min', 'auto:interval:30'),
       Markup.button.callback('60 min', 'auto:interval:60'),
       Markup.button.callback('2 hr', 'auto:interval:120')
+    ],
+    [
+      Markup.button.callback(`${targetMinute === 0 ? '✅' : ''} :00`, 'auto:minute:0'),
+      Markup.button.callback(`${targetMinute === 10 ? '✅' : ''} :10`, 'auto:minute:10'),
+      Markup.button.callback(`${targetMinute === 15 ? '✅' : ''} :15`, 'auto:minute:15'),
+      Markup.button.callback(`${targetMinute === 30 ? '✅' : ''} :30`, 'auto:minute:30')
     ],
     [
       Markup.button.callback(`${has('riddle') ? '✅' : '➕'} Riddle`, 'auto:type:riddle'),
@@ -214,32 +300,21 @@ function antiSpamKeyboard() {
 }
 
 // ---------------------------------------------------------------------
-// GAMES PANEL
+// GAMES PANEL (informational — actual games are manual commands or Auto-Events)
 // ---------------------------------------------------------------------
 function gamesText() {
   return [
     '🎮 GAMES',
     '',
-    'Playable here in chat:',
-    '❌⭕ Tic-Tac-Toe — /tictactoe',
-    '🟡 Connect Four — /connectfour',
+    'Keeper\'s Riddle, Fast Typing, and Ashborn Trial can all be started manually anytime with /riddle, /fasttyping, and /trial.',
     '',
-    'Admin-started group games:',
-    '🟣 Keeper\'s Riddle — /riddle',
-    '⚡ Fast Typing — /fasttyping',
-    '🟠 Ashborn Trial — /trial',
-    '',
-    'Use Auto-Events to have the chat cycle through the admin games automatically.'
+    'To have them drop automatically on a timer instead, use Auto-Events.'
   ].join('\n');
 }
 
 function gamesKeyboard() {
   return Markup.inlineKeyboard([
-    [
-      Markup.button.callback('❌⭕ Tic-Tac-Toe', 'pmenu:games:tictactoe'),
-      Markup.button.callback('🟡 Connect Four', 'pmenu:games:connectfour')
-    ],
-    [Markup.button.callback('⏱ Auto-Events', 'grp:autoevents')],
+    [Markup.button.callback('⏱ Go to Auto-Events', 'grp:autoevents')],
     [Markup.button.callback('⬅️ Back', 'grp:main')]
   ]);
 }

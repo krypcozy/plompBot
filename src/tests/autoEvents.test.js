@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildEventLeaderboard } = require('../src/autoEvents');
+const { buildEventLeaderboard } = require('../autoEvents');
 
 const users = {
   '1': { username: 'alice', firstName: 'Alice', seasonXP: { chronicles: 200, community: 10 }, questionsAnswered: 3, correctAnswers: 2 },

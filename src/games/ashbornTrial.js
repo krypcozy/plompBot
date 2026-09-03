@@ -18,10 +18,6 @@ function displayName(meta) {
   return meta.username ? `@${meta.username}` : meta.firstName || 'Plomper';
 }
 
-/**
- * sendMessage: (chatId, text) => Promise  — injected so this module doesn't
- * need to know about Telegraf directly.
- */
 function startTrial(chatId, sendMessage) {
   if (activeTrials.has(chatId)) return null;
 
@@ -39,7 +35,6 @@ function startTrial(chatId, sendMessage) {
     scores: {}, // userId -> { count, meta }
     roundFirstSolved: false,
     roundAttemptedUsers: new Set(),
-    roundSolvedUsers: new Set(),
     timer: null
   };
 
@@ -51,21 +46,14 @@ function startTrial(chatId, sendMessage) {
 function postRound(session) {
   session.roundFirstSolved = false;
   session.roundAttemptedUsers = new Set();
-  session.roundSolvedUsers = new Set();
-  session.roundMessageId = null;
   const r = session.rounds[session.currentIndex];
 
   let msg = `🟠 ASHBORN TRIAL — Round ${session.currentIndex + 1}/${session.rounds.length}\n\n${r.question}`;
   if (r.options) {
     msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
   }
-  msg += `\n\n⏱ ${session.settings.roundTimeSeconds}s — answer fast.`;
-  const sent = session.sendMessage(session.chatId, msg);
-  if (sent && typeof sent.then === 'function') {
-    sent.then((message) => {
-      if (message && message.message_id) session.roundMessageId = message.message_id;
-    }).catch(() => {});
-  }
+  msg += `\n\n⏱ ${session.settings.roundTimeSeconds}s — one answer per person.`;
+  session.sendMessage(session.chatId, msg);
 
   session.timer = setTimeout(() => advanceRound(session), session.settings.roundTimeSeconds * 1000);
 }
@@ -100,20 +88,24 @@ function finishTrial(session) {
   session.sendMessage(session.chatId, msg);
 }
 
-function checkAnswer(chatId, userId, meta, text, replyToMessageId = null) {
+/**
+ * One attempt per person, per round. First message from a user during
+ * the current round is their one shot — always gets a response, right
+ * or wrong. Further messages from them during that same round are
+ * silently ignored.
+ */
+function checkAnswer(chatId, userId, meta, text) {
   const session = activeTrials.get(chatId);
   if (!session) return null;
 
   const key = String(userId);
-  if (session.roundAttemptedUsers.has(key)) return { alreadyAttempted: true };
-
+  if (session.roundAttemptedUsers.has(key)) return null;
   session.roundAttemptedUsers.add(key);
+
   const r = session.rounds[session.currentIndex];
   const correct = matchesAnswer(text, r);
-  const isReplyAttempt = session.roundMessageId != null && replyToMessageId === session.roundMessageId;
-  if (!correct) return { correct: false, isReplyAttempt };
+  if (!correct) return { correct: false };
 
-  session.roundSolvedUsers.add(key);
   if (!session.scores[userId]) session.scores[userId] = { count: 0, meta };
   session.scores[userId].count += 1;
 

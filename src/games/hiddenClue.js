@@ -6,7 +6,7 @@ const { loadRiddleBank } = require('./keepersRiddle');
 const { matchesAnswer } = require('../answerMatch');
 
 const STATE_PATH = path.join(__dirname, '../../data/hiddenClueState.json');
-const activeClues = new Map(); // chatId -> { riddle, solvedBy, timer }
+const activeClues = new Map(); // chatId -> { riddle, solvedBy, attemptedUsers, timer }
 
 function loadState() {
   try {
@@ -23,12 +23,6 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/**
- * Called on every eligible (non-spam) message. Rolls a small random chance
- * to fire a Hidden Clue, gated by a minimum gap and a daily cap so it stays
- * a rare surprise rather than a recurring interruption.
- * Returns the riddle object if one was triggered, otherwise null.
- */
 function maybeTrigger(chatId) {
   const settings = loadSettings().hiddenClue;
   if (!settings || !settings.enabled) return null;
@@ -48,7 +42,7 @@ function maybeTrigger(chatId) {
 
   const bank = loadRiddleBank();
   const riddle = bank.riddles[Math.floor(Math.random() * bank.riddles.length)];
-  const game = { riddle, solvedBy: null, attemptedUsers: new Set(), messageId: null };
+  const game = { riddle, solvedBy: null, attemptedUsers: new Set() };
   game.timer = setTimeout(() => activeClues.delete(chatId), settings.answerWindowSeconds * 1000);
   activeClues.set(chatId, game);
 
@@ -59,27 +53,25 @@ function maybeTrigger(chatId) {
   return riddle;
 }
 
-function setMessageId(chatId, messageId) {
-  const game = activeClues.get(chatId);
-  if (game) game.messageId = messageId;
-}
-
-function checkAnswer(chatId, userId, meta, text, replyToMessageId = null) {
+/**
+ * One attempt per person for this drop — always responds on their
+ * first message, silent afterward for that same user.
+ */
+function checkAnswer(chatId, userId, meta, text) {
   const game = activeClues.get(chatId);
   if (!game || game.solvedBy) return null;
-  const userKey = String(userId);
-  if (game.attemptedUsers.has(userKey)) return { alreadyAttempted: true };
 
-  game.attemptedUsers.add(userKey);
+  const uid = String(userId);
+  if (game.attemptedUsers.has(uid)) return null;
+  game.attemptedUsers.add(uid);
+
   const correct = matchesAnswer(text, game.riddle);
-  const isReplyAttempt = game.messageId != null && replyToMessageId === game.messageId;
-
   const user = getUser(userId, meta);
   user.questionsAnswered += 1;
 
   if (!correct) {
     saveUsers();
-    return { correct: false, isReplyAttempt };
+    return { correct: false };
   }
 
   game.solvedBy = userId;
@@ -99,4 +91,4 @@ function isActive(chatId) {
   return activeClues.has(chatId);
 }
 
-module.exports = { maybeTrigger, checkAnswer, isActive, setMessageId };
+module.exports = { maybeTrigger, checkAnswer, isActive };

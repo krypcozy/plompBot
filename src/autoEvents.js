@@ -1,20 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 const { loadSettings } = require('./xpEngine');
-const { allUsers } = require('./users');
 const fastTyping = require('./games/fastTyping');
 const keepersRiddle = require('./games/keepersRiddle');
 const ashbornTrial = require('./games/ashbornTrial');
-const hiddenClue = require('./games/hiddenClue');
 
 const STATE_PATH = path.join(__dirname, '../data/autoEventsState.json');
-const CHECK_INTERVAL_MS = 60 * 1000; // tick every minute
+const CHECK_INTERVAL_MS = 60 * 1000; // tick every minute, checking for an aligned fire time
 
 function loadState() {
   try {
     return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
   } catch {
-    return { lastAutoEventAt: null, lastAutoEventBucket: null };
+    return { lastAutoEventAt: null, lastFiredMinuteKey: null };
   }
 }
 function saveState(state) {
@@ -22,10 +20,7 @@ function saveState(state) {
 }
 
 function anyGameActive(chatId) {
-  return fastTyping.isGameActive(chatId)
-    || keepersRiddle.isRiddleActive(chatId)
-    || ashbornTrial.isTrialActive(chatId)
-    || hiddenClue.isActive(chatId);
+  return fastTyping.isGameActive(chatId) || keepersRiddle.isRiddleActive(chatId) || ashbornTrial.isTrialActive(chatId);
 }
 
 function displayName(user) {
@@ -34,7 +29,7 @@ function displayName(user) {
   return user.firstName || 'Plomper';
 }
 
-function buildEventLeaderboard(users = allUsers()) {
+function buildEventLeaderboard(users) {
   const rows = Object.entries(users)
     .map(([id, user]) => ({
       id,
@@ -50,9 +45,22 @@ function buildEventLeaderboard(users = allUsers()) {
   return rows.map((row, index) => `${index + 1}. ${row.name} — ${row.correct} correct`).join('\n');
 }
 
+/**
+ * Whether `now` falls on a wall-clock-aligned fire slot — e.g. with
+ * intervalMinutes=60 and targetMinute=10, this is true only at :10 past
+ * every hour (UTC), not "60 minutes after whenever the bot happened to
+ * start." Alignment resets at UTC midnight, which is fine for any
+ * interval that divides evenly into 60 or 1440 (5, 10, 15, 20, 30, 60...).
+ */
+function isAlignedFireTime(now, intervalMinutes, targetMinute) {
+  const minuteOfDay = now.getUTCHours() * 60 + now.getUTCMinutes();
+  return (((minuteOfDay - targetMinute) % intervalMinutes) + intervalMinutes) % intervalMinutes === 0;
+}
+
 function triggerRandomEvent(bot, chatId, types) {
   if (anyGameActive(chatId)) return null;
   if (!types || types.length === 0) return null;
+
   const type = types[Math.floor(Math.random() * types.length)];
   const sendMessage = (cid, text) => bot.telegram.sendMessage(cid, text);
 
@@ -60,7 +68,7 @@ function triggerRandomEvent(bot, chatId, types) {
     const settings = loadSettings();
     const game = fastTyping.startGame(chatId);
     if (!game) return null;
-    sendMessage(chatId, `⚡ PLOMP RUSH — FAST TYPING\n\nType this EXACTLY, first correct wins:\n\n"${game.phrase}"\n\n⏱ ${settings.fastTyping.timeLimitSeconds}s\n\nThis question stays open for 10 minutes total.`);
+    sendMessage(chatId, `⚡ PLOMP RUSH — FAST TYPING\n\nType this EXACTLY, first correct wins:\n\n"${game.phrase}"\n\n⏱ ${settings.fastTyping.timeLimitSeconds}s`);
     return 'fasttyping';
   }
 
@@ -72,13 +80,8 @@ function triggerRandomEvent(bot, chatId, types) {
     if (r.options) {
       msg += `\n\n${r.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}`;
     }
-    msg += `\n\nAnswer in the chat. First correct gets a bonus.\n\n⏱ 10 minutes total, with a warning at 5 minutes.`;
-    const sent = sendMessage(chatId, msg);
-    if (sent && typeof sent.then === 'function') {
-      sent.then((message) => {
-        if (message && message.message_id) keepersRiddle.setMessageId(chatId, message.message_id);
-      }).catch(() => {});
-    }
+    msg += `\n\nOne answer per person. First correct gets a bonus.`;
+    sendMessage(chatId, msg);
     return 'riddle';
   }
 
@@ -96,21 +99,29 @@ async function checkAutoEvents(bot) {
   const cfg = settings.autoEvents;
   if (!cfg || !cfg.enabled || !settings.primaryChatId) return;
 
-  const intervalMs = Math.max(5, Number(cfg.intervalMinutes) || 60) * 60 * 1000;
+  const now = new Date();
+  const intervalMinutes = Math.max(5, cfg.intervalMinutes);
+  const targetMinute = cfg.targetMinute != null ? ((cfg.targetMinute % intervalMinutes) + intervalMinutes) % intervalMinutes : 10;
+
+  if (!isAlignedFireTime(now, intervalMinutes, targetMinute)) return;
+
+  // Guard against firing twice within the same qualifying minute
+  const minuteKey = Math.floor(now.getTime() / 60000);
   const state = loadState();
-  const last = state.lastAutoEventAt ? new Date(state.lastAutoEventAt).getTime() : 0;
-  if (Date.now() - last < intervalMs) return;
+  if (state.lastFiredMinuteKey === minuteKey) return;
 
   const fired = triggerRandomEvent(bot, settings.primaryChatId, cfg.types);
   if (fired) {
-    state.lastAutoEventAt = new Date().toISOString();
+    state.lastFiredMinuteKey = minuteKey;
+    state.lastAutoEventAt = now.toISOString();
     saveState(state);
-    console.log(`[autoEvents] Fired "${fired}" in chat ${settings.primaryChatId}.`);
+    console.log(`[autoEvents] Fired "${fired}" in chat ${settings.primaryChatId} at :${String(now.getUTCMinutes()).padStart(2, '0')} past the hour (UTC).`);
   }
 }
 
 function startAutoEvents(bot) {
+  checkAutoEvents(bot); // catch the current minute immediately on boot, in case it's already aligned
   setInterval(() => checkAutoEvents(bot), CHECK_INTERVAL_MS);
 }
 
-module.exports = { startAutoEvents, triggerRandomEvent, buildEventLeaderboard };
+module.exports = { startAutoEvents, triggerRandomEvent, isAlignedFireTime, buildEventLeaderboard };

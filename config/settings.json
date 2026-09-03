@@ -54,6 +54,7 @@
   "autoEvents": {
     "enabled": true,
     "intervalMinutes": 60,
+    "targetMinute": 10,
     "types": [
       "fasttyping",
       "trial",
